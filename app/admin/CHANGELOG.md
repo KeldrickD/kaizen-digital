@@ -23,17 +23,25 @@
   - Message status tracking (pending, sent, failed)
   - Retry functionality for failed messages
 
+- **Consultation Calendar**
+  - View and manage scheduled consultations
+  - Filter appointments by status and package interest
+  - Detailed appointment modal with lead information
+  - Appointment status management (complete, cancel, no-show)
+  - Reminder functionality
+
+- **System Settings**
+  - Communication channel configuration (Email, SMS, WhatsApp)
+  - Notification preferences customization
+  - Lead qualification threshold adjustments
+  - Admin profile management
+
 ### Integration Points
 - Lead qualification data stored via `/api/leads/store`
 - Message scheduling via `/api/messaging/schedule`
 - Cross-platform message sending via `/api/messaging/send`
 
 ## Upcoming Features
-- **Consultation Calendar**
-  - Integration with Calendly API
-  - Appointment management and reminders
-  - Custom calendars for team members
-
 - **Analytics Dashboard**
   - Conversion funnel visualization
   - Channel performance metrics
@@ -43,4 +51,10 @@
 - **User Management**
   - Team member accounts with role-based permissions
   - Activity logs and audit trails
-  - Performance tracking for sales team 
+  - Performance tracking for sales team
+
+- **Enhanced Calendar Features**
+  - Google Calendar and Outlook integration
+  - Availability management for team members
+  - Automated reminder sequences
+  - Client-facing scheduling page 
