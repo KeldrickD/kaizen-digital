@@ -11,9 +11,9 @@ const ChatWidget = () => {
   const [userId, setUserId] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Configuration - REPLACE THESE VALUES WITH YOUR OWN
-  const API_URL = 'https://your-render-url.onrender.com/api/chat';
-  const API_KEY = 'your-api-key'; // The API key you set in your Render environment variables
+  // Configuration with real values
+  const API_URL = 'https://lead-gen-bot.onrender.com/api/chat';
+  const API_KEY = '039d4b24647bbb106ae1e0595f3692b9e48402cddf85424f944bf0d65f499263';
 
   // Initialize user ID
   useEffect(() => {
