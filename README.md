@@ -9,6 +9,7 @@ A professional landing page for web design services with Stripe payment integrat
 - Client intake form automation
 - Responsive design for all devices
 - 48-hour website delivery promise
+- AI-powered chat widget with dynamic payment options
 
 ## Technologies Used
 
@@ -17,6 +18,8 @@ A professional landing page for web design services with Stripe payment integrat
 - TypeScript
 - Tailwind CSS 3
 - Stripe API
+- Python (Flask) backend for payment processing
+- Firebase/Google Sheets for lead tracking
 
 ## Getting Started
 
@@ -24,6 +27,7 @@ A professional landing page for web design services with Stripe payment integrat
 
 - Node.js 18.17 or later
 - Stripe account with API keys
+- Python 3.9+ (for backend deployment)
 
 ### Installation
 
@@ -44,6 +48,7 @@ A professional landing page for web design services with Stripe payment integrat
      ```
      STRIPE_PUBLIC_KEY=pk_test_your_key
      STRIPE_SECRET_KEY=sk_test_your_key
+     PAYMENT_API_URL=https://your-payment-api-url.com
      ```
 
 4. Run the development server
@@ -51,6 +56,45 @@ A professional landing page for web design services with Stripe payment integrat
    npm run dev
    ```
    Open [http://localhost:3000](http://localhost:3000) to see the result.
+
+## Payment Processing Backend
+
+This project includes a Python Flask backend for handling dynamic payment options:
+
+1. Navigate to the Python backend directory:
+   ```bash
+   cd app/api/python-backend
+   ```
+
+2. Install Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Set up your backend environment:
+   - Copy `.env.example` to `.env`
+   - Add your Stripe credentials and other settings
+
+4. Deploy the backend:
+   - See detailed instructions in `app/api/python-backend/README.md`
+   - You can deploy to Cloud Run, Heroku, or other services
+
+5. Update your `.env.local` file with the deployed backend URL:
+   ```
+   PAYMENT_API_URL=https://your-deployed-api.com
+   ```
+
+## Chat Widget Features
+
+The enhanced chat widget offers:
+
+- Intelligent conversation flow to guide users to payment
+- Dynamic payment options (deposit or full payment)
+- Automatic follow-up system for leads and partial payments
+- Lead tracking and conversion analytics
+- Integration with Firebase or Google Sheets
+
+To configure the chat widget, edit `app/components/ChatWidget.tsx`. For the backend integration, follow the instructions in the backend README.
 
 ## Deployment
 
@@ -64,3 +108,5 @@ vercel
 ## Configuration
 
 To update the pricing or service offerings, edit the `pricingTiers` array in `app/components/PricingSection.tsx`. 
+
+To modify the chat widget's behavior, edit the conversation flows in `app/components/ChatWidget.tsx`. 

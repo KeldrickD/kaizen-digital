@@ -6,9 +6,19 @@ interface Message {
   text: string;
   isUser: boolean;
   quickReplies?: string[];
-  type?: 'text' | 'pricing' | 'cta';
+  type?: 'text' | 'pricing' | 'cta' | 'payment-options';
   ctaLink?: string;
   ctaText?: string;
+  packageType?: string;
+  packagePrice?: number;
+}
+
+interface PaymentOption {
+  id: string;
+  type: 'deposit' | 'full';
+  amount: number;
+  title: string;
+  description: string;
 }
 
 const ChatWidget = () => {
@@ -21,11 +31,15 @@ const ChatWidget = () => {
   const [email, setEmail] = useState<string>('');
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [lastInteraction, setLastInteraction] = useState<Date | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<{type: string, price: number} | null>(null);
+  const [paymentLinks, setPaymentLinks] = useState<{deposit: string, full: string} | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'none' | 'deposit_paid' | 'full_paid'>('none');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Configuration with real values
   const API_URL = 'https://lead-gen-bot.onrender.com/api/chat';
   const API_KEY = '039d4b24647bbb106ae1e0595f3692b9e48402cddf85424f944bf0d65f499263';
+  const PAYMENT_API_URL = '/api/payment-options'; // Endpoint to be created
 
   // Website packages and pricing
   const pricingOptions = [
@@ -42,23 +56,66 @@ const ChatWidget = () => {
       localStorage.setItem('chat_user_id', storedUserId);
     }
     setUserId(storedUserId);
+    
+    // Check if user has existing payment status
+    checkPaymentStatus(storedUserId);
   }, []);
+
+  // Check payment status from backend
+  const checkPaymentStatus = async (userId: string) => {
+    try {
+      const response = await fetch(`${PAYMENT_API_URL}/status?userId=${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setPaymentStatus(data.status || 'none');
+        
+        // If payment was made, update UI accordingly
+        if (data.status === 'deposit_paid' || data.status === 'full_paid') {
+          showPostPaymentMessages(data.status);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+    }
+  };
+
+  // Show appropriate messages after payment
+  const showPostPaymentMessages = (status: string) => {
+    if (status === 'deposit_paid') {
+      setMessages([{
+        text: "Thanks for your deposit! I've sent the intake form to your email. To complete your website project, please fill it out as soon as possible.",
+        isUser: false,
+        quickReplies: ["I need help with the form", "When do I pay the rest?"]
+      }]);
+    } else if (status === 'full_paid') {
+      setMessages([{
+        text: "Thank you for your payment! Your project is now prioritized for completion within 48 hours. I've sent the intake form to your email - please fill it out as soon as possible so we can get started right away!",
+        isUser: false,
+        quickReplies: ["I need help with the form", "What happens next?"]
+      }]);
+    }
+  };
 
   // Add welcome message when chat is opened for the first time
   useEffect(() => {
     if (isChatOpen && messages.length === 0) {
-      setMessages([{ 
-        text: "Hey there! Welcome to Kaizen Digital. I'm your AI assistant, here to help you get an awesome website in 48 hours! 🚀", 
-        isUser: false,
-        quickReplies: [
-          "I need a website",
-          "How much does it cost?",
-          "Tell me more about your services",
-          "I have a question"
-        ]
-      }]);
+      // Show different message based on payment status
+      if (paymentStatus === 'none') {
+        setMessages([{ 
+          text: "Hey there! Welcome to Kaizen Digital. I'm your AI assistant, here to help you get an awesome website in 48 hours! 🚀", 
+          isUser: false,
+          quickReplies: [
+            "I need a website",
+            "How much does it cost?",
+            "Tell me more about your services",
+            "I have a question"
+          ]
+        }]);
+      } else {
+        showPostPaymentMessages(paymentStatus);
+      }
     }
-  }, [isChatOpen, messages.length]);
+  }, [isChatOpen, messages.length, paymentStatus]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -69,27 +126,21 @@ const ChatWidget = () => {
 
   // Set up follow-up messages
   useEffect(() => {
-    if (!lastInteraction || !email) return;
+    if (!lastInteraction || paymentStatus !== 'none') return;
     
     // Follow up after 1 hour
     const oneHourTimeout = setTimeout(() => {
-      if (!isConversionCompleted()) {
-        sendFollowUpMessage("Hey! Just checking in. Do you have any questions before you get started? I'd love to help!");
-      }
+      sendFollowUpMessage("Hey! Just checking in. Do you have any questions before you get started? I'd love to help!");
     }, 60 * 60 * 1000); // 1 hour
     
     // Follow up after 24 hours
     const oneDayTimeout = setTimeout(() => {
-      if (!isConversionCompleted()) {
-        sendFollowUpMessage("I still have a slot available for you! Let's get your website live this week. Want me to hold your spot?");
-      }
+      sendFollowUpMessage("I still have a slot available for you! Let's get your website live this week. Want me to hold your spot?");
     }, 24 * 60 * 60 * 1000); // 24 hours
     
     // Follow up after 3 days
     const threeDayTimeout = setTimeout(() => {
-      if (!isConversionCompleted()) {
-        sendFollowUpMessage("Last call! My current openings are filling up fast. If you want your website ready this week, now's the time to start!");
-      }
+      sendFollowUpMessage("Last call! My current openings are filling up fast. If you want your website ready this week, now's the time to start!");
     }, 3 * 24 * 60 * 60 * 1000); // 3 days
     
     return () => {
@@ -97,21 +148,129 @@ const ChatWidget = () => {
       clearTimeout(oneDayTimeout);
       clearTimeout(threeDayTimeout);
     };
-  }, [lastInteraction, email]);
+  }, [lastInteraction, paymentStatus]);
 
-  // Dummy function to check if user completed purchase
-  const isConversionCompleted = () => {
-    // In a real implementation, check if user has made a payment
-    return false;
-  };
+  // Set up deposit payment reminder if deposit was paid
+  useEffect(() => {
+    if (paymentStatus !== 'deposit_paid') return;
+    
+    // Remind after 3 days
+    const reminderTimeout = setTimeout(() => {
+      sendFollowUpMessage("Just a friendly reminder about your website project! To complete the process, you'll need to pay the remaining balance before we can launch your site. Let me know if you need the payment link again!");
+    }, 3 * 24 * 60 * 60 * 1000); // 3 days
+    
+    return () => {
+      clearTimeout(reminderTimeout);
+    };
+  }, [paymentStatus]);
 
   const sendFollowUpMessage = (message: string) => {
     // In a real implementation, this would send an email or notification
     console.log("Follow-up:", message);
+    
+    // Also store in database for future reference
+    storeLeadInteraction(userId, 'follow_up', { message });
+  };
+
+  // Store interactions in database
+  const storeLeadInteraction = async (userId: string, type: string, data: any) => {
+    try {
+      await fetch(`${PAYMENT_API_URL}/interaction`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          type,
+          data,
+          timestamp: new Date().toISOString()
+        })
+      });
+    } catch (error) {
+      console.error('Error storing interaction:', error);
+    }
   };
 
   const toggleChat = () => {
     setIsChatOpen(!isChatOpen);
+  };
+
+  // Generate payment links for a specific package
+  const generatePaymentLinks = async (packageType: string, packagePrice: number) => {
+    setIsTyping(true);
+    try {
+      const response = await fetch(`${PAYMENT_API_URL}/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          email: email || null,
+          packageType,
+          packagePrice,
+          depositAmount: 500
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate payment links');
+      }
+      
+      const data = await response.json();
+      setPaymentLinks(data.links);
+      
+      // Show payment options
+      const newMessages = [...messages, {
+        text: "Great! I have two payment options for you:",
+        isUser: false,
+        type: 'payment-options' as const,
+        packageType,
+        packagePrice
+      }];
+      
+      setMessages(newMessages);
+      setSelectedPackage({ type: packageType, price: packagePrice });
+      
+    } catch (error) {
+      console.error('Error generating payment links:', error);
+      setMessages([...messages, {
+        text: "I'm having trouble generating payment options right now. Could you try again in a moment?",
+        isUser: false
+      }]);
+    }
+    setIsTyping(false);
+  };
+
+  // Process payment selection
+  const handlePaymentOptionSelect = async (optionType: 'deposit' | 'full') => {
+    if (!paymentLinks) return;
+    
+    const paymentUrl = optionType === 'deposit' ? paymentLinks.deposit : paymentLinks.full;
+    
+    // Record selection
+    storeLeadInteraction(userId, 'payment_selection', {
+      optionType,
+      packageType: selectedPackage?.type,
+      packagePrice: selectedPackage?.price
+    });
+    
+    // Add message showing selection
+    setMessages([...messages, {
+      text: optionType === 'deposit' 
+        ? "I'd like to pay the $500 deposit" 
+        : "I'd like to pay the full amount",
+      isUser: true
+    }, {
+      text: optionType === 'deposit'
+        ? "Great! I'm redirecting you to our secure payment page to make your $500 deposit. After payment, I'll send you the intake form to gather all the details for your website."
+        : "Excellent choice! I'm redirecting you to our secure payment page to make your full payment. This will prioritize your project for completion within 48 hours. After payment, I'll send you the intake form.",
+      isUser: false,
+      type: 'cta',
+      ctaLink: paymentUrl,
+      ctaText: optionType === 'deposit' ? "Pay $500 Deposit" : `Pay Full Amount ($${selectedPackage?.price})`
+    }]);
   };
 
   // Handle quick reply selection
@@ -120,6 +279,9 @@ const ChatWidget = () => {
     const newMessages = [...messages, { text: reply, isUser: true }];
     setMessages(newMessages);
     setLastInteraction(new Date());
+    
+    // Store interaction
+    storeLeadInteraction(userId, 'quick_reply', { reply });
     
     // Process the reply
     setTimeout(() => {
@@ -141,17 +303,29 @@ const ChatWidget = () => {
         case "E-commerce Store":
         case "Portfolio/Personal Website":
         case "Custom Project":
+          let packagePrice = 1500; // Default to Business Pro
+          if (reply === "Business Website") packagePrice = 1500;
+          else if (reply === "E-commerce Store") packagePrice = 2500;
+          else if (reply === "Portfolio/Personal Website") packagePrice = 750;
+          else if (reply === "Custom Project") packagePrice = 2500;
+          
           setMessages([...newMessages, {
             text: `Great choice! I can get that ${reply.toLowerCase()} built for you in just 48 hours. Let me show you the pricing so we can get started.`,
             isUser: false,
             type: 'pricing'
-          }, {
-            text: "Ready to start? You can secure your spot with a $500 deposit. Click here to pay now!",
-            isUser: false,
-            type: 'cta',
-            ctaLink: "/api/create-checkout-session",
-            ctaText: "Pay Deposit Now"
           }]);
+          
+          // Ask for email if we don't have it yet
+          if (!email) {
+            setMessages(prev => [...prev, {
+              text: "To provide you with payment options, could you please share your email address?",
+              isUser: false
+            }]);
+            setShowEmailInput(true);
+          } else {
+            // Generate payment links if we already have email
+            generatePaymentLinks(reply, packagePrice);
+          }
           break;
           
         case "How much does it cost?":
@@ -160,12 +334,26 @@ const ChatWidget = () => {
             isUser: false,
             type: 'pricing'
           }, {
-            text: "Want to start today? Pay now and I'll guide you through the next steps!",
+            text: "Which package are you interested in?",
             isUser: false,
-            type: 'cta',
-            ctaLink: "/api/create-checkout-session",
-            ctaText: "Pay Deposit Now"
+            quickReplies: [
+              "Starter Website",
+              "Business Pro",
+              "Elite Custom Site"
+            ]
           }]);
+          break;
+          
+        case "Starter Website":
+          generatePaymentLinks("Starter Website", 750);
+          break;
+          
+        case "Business Pro":
+          generatePaymentLinks("Business Pro", 1500);
+          break;
+          
+        case "Elite Custom Site":
+          generatePaymentLinks("Elite Custom Site", 2500);
           break;
           
         case "Tell me more about your services":
@@ -173,11 +361,28 @@ const ChatWidget = () => {
             text: "We specialize in high-performance websites that help businesses grow. Here's what you get with every website:\n✅ Mobile-Optimized & Fast-Loading\n✅ SEO & Lead Generation Ready\n✅ Custom Branding & Sleek Design\n✅ Conversion-Focused Strategy",
             isUser: false
           }, {
-            text: "Let's build something amazing! Ready to start? Click below to pay & get started.",
+            text: "Would you like to see our pricing options?",
             isUser: false,
-            type: 'cta',
-            ctaLink: "/api/create-checkout-session",
-            ctaText: "Pay Deposit Now"
+            quickReplies: [
+              "Show me pricing",
+              "I have a question"
+            ]
+          }]);
+          break;
+          
+        case "Show me pricing":
+          setMessages([...newMessages, {
+            text: "Here's our simple and transparent pricing:",
+            isUser: false,
+            type: 'pricing'
+          }, {
+            text: "Which package are you interested in?",
+            isUser: false,
+            quickReplies: [
+              "Starter Website",
+              "Business Pro",
+              "Elite Custom Site"
+            ]
           }]);
           break;
           
@@ -192,6 +397,53 @@ const ChatWidget = () => {
           setShowEmailInput(true);
           break;
           
+        case "I need help with the form":
+          setMessages([...newMessages, {
+            text: "No problem! The intake form helps us gather all the details we need to build your website. If you're having trouble with any questions, feel free to respond with 'as discussed' for now, and we'll follow up to clarify those points. Is there a specific section you need help with?",
+            isUser: false,
+            quickReplies: [
+              "Content questions",
+              "Design preferences",
+              "Technical questions"
+            ]
+          }]);
+          break;
+          
+        case "When do I pay the rest?":
+          setMessages([...newMessages, {
+            text: "The remaining balance will be due before we launch your website. We'll send you a reminder with a payment link about 3 days before your scheduled launch date. You'll have a chance to review the site before making the final payment.",
+            isUser: false,
+            quickReplies: [
+              "What happens next?",
+              "I need help with the form"
+            ]
+          }]);
+          break;
+          
+        case "What happens next?":
+          setMessages([...newMessages, {
+            text: "Here's what happens next:\n1️⃣ Complete the intake form I emailed you\n2️⃣ Our design team will review your information\n3️⃣ We'll create your website in 48 hours\n4️⃣ You'll receive a preview link to review\n5️⃣ After your approval, we'll launch your site!",
+            isUser: false,
+            quickReplies: [
+              "How long until launch?",
+              "I need help with the form"
+            ]
+          }]);
+          break;
+          
+        case "Back to main menu":
+          setMessages([...newMessages, {
+            text: "What would you like to know about?",
+            isUser: false,
+            quickReplies: [
+              "I need a website",
+              "How much does it cost?",
+              "Tell me more about your services",
+              "I have a question"
+            ]
+          }]);
+          break;
+          
         default:
           // For any other reply, use the API
           sendMessage(reply);
@@ -203,15 +455,31 @@ const ChatWidget = () => {
     if (!email || !email.includes('@')) return;
     
     setMessages([...messages, { 
-      text: `Thanks! I've saved your email (${email}). I'll follow up with more information soon!`,
-      isUser: false,
-      quickReplies: ["Back to main menu"]
+      text: `Thanks ${email}! Now I can provide you with personalized options.`,
+      isUser: false
     }]);
     setShowEmailInput(false);
     setLastInteraction(new Date());
     
-    // In a real implementation, store the email in your database
-    console.log("Captured lead email:", email);
+    // Store the email
+    storeLeadInteraction(userId, 'email_capture', { email });
+    
+    // If we have a selected package, generate payment links
+    if (selectedPackage) {
+      generatePaymentLinks(selectedPackage.type, selectedPackage.price);
+    } else {
+      // Otherwise continue the conversation
+      setMessages(prev => [...prev, {
+        text: "What type of website are you looking for?",
+        isUser: false,
+        quickReplies: [
+          "Business Website",
+          "E-commerce Store",
+          "Portfolio/Personal Website",
+          "Custom Project"
+        ]
+      }]);
+    }
   };
 
   const sendMessage = async (message = messageInput) => {
@@ -223,6 +491,9 @@ const ChatWidget = () => {
     setMessageInput('');
     setIsTyping(true);
     setLastInteraction(new Date());
+    
+    // Store the message
+    storeLeadInteraction(userId, 'message', { message });
 
     try {
       // Send request to API
@@ -287,11 +558,51 @@ const ChatWidget = () => {
     </div>
   );
 
+  // Render payment options
+  const renderPaymentOptions = (packageType: string, packagePrice: number) => {
+    const paymentOptions: PaymentOption[] = [
+      {
+        id: 'deposit',
+        type: 'deposit',
+        amount: 500,
+        title: 'Deposit Option',
+        description: `Pay $500 now to secure your spot, then the remaining $${packagePrice - 500} before launch.`
+      },
+      {
+        id: 'full',
+        type: 'full',
+        amount: packagePrice,
+        title: 'Full Payment',
+        description: `Pay the full $${packagePrice} now for priority service and faster completion.`
+      }
+    ];
+    
+    return (
+      <div className="bg-white rounded-lg p-3 mt-2 mb-4 shadow-sm">
+        {paymentOptions.map((option) => (
+          <div 
+            key={option.id}
+            className="mb-3 p-3 border border-gray-200 rounded-lg hover:border-blue-500 cursor-pointer transition-colors"
+            onClick={() => handlePaymentOptionSelect(option.type)}
+          >
+            <div className="font-bold text-gray-800">{option.title}</div>
+            <div className="text-sm text-gray-600 mb-2">{option.description}</div>
+            <div className="text-[#4a6cf7] font-semibold">
+              {option.type === 'deposit' ? `$${option.amount} now` : `$${option.amount} one-time payment`}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // Render CTA button
   const renderCTA = (ctaLink: string, ctaText: string) => (
     <a 
       href={ctaLink}
       className="inline-block bg-[#4a6cf7] hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-2 transition-colors duration-200"
+      target="_blank"
+      rel="noopener noreferrer"
     >
       {ctaText}
     </a>
@@ -332,6 +643,12 @@ const ChatWidget = () => {
                 
                 {/* Render pricing if message type is pricing */}
                 {!message.isUser && message.type === 'pricing' && renderPricing()}
+                
+                {/* Render payment options if message type is payment-options */}
+                {!message.isUser && message.type === 'payment-options' && 
+                  message.packageType && message.packagePrice && 
+                  renderPaymentOptions(message.packageType, message.packagePrice)
+                }
                 
                 {/* Render CTA button if message type is cta */}
                 {!message.isUser && message.type === 'cta' && message.ctaLink && message.ctaText && 
