@@ -389,7 +389,11 @@ const ChatWidget = () => {
         case "I have a question":
           setMessages([...newMessages, {
             text: "Sure! What would you like to ask? I can help with pricing, features, timelines, or anything else.",
-            isUser: false
+            isUser: false,
+            quickReplies: [
+              "Book a consultation",
+              "Show me pricing"
+            ]
           }, {
             text: "Drop your email here and I'll follow up with more details if you need.",
             isUser: false
@@ -441,6 +445,16 @@ const ChatWidget = () => {
               "Tell me more about your services",
               "I have a question"
             ]
+          }]);
+          break;
+          
+        case "Book a consultation":
+          setMessages([...newMessages, {
+            text: "Great! If you'd like to speak with one of our web experts, you can book a free 10-minute consultation to discuss your project in detail.",
+            isUser: false,
+            type: 'cta',
+            ctaLink: "https://calendly.com/kaizen-digital/free-consultation",
+            ctaText: "Book a Free Consultation"
           }]);
           break;
           

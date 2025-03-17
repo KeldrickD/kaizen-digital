@@ -1,7 +1,8 @@
 "use client"
 
-import React from 'react'
+import React, { useState } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
+import PricingCalculator from './PricingCalculator'
 
 // Initialize Stripe
 const stripePromise = process.env.STRIPE_PUBLIC_KEY 
@@ -42,6 +43,8 @@ const pricingTiers = [
 ]
 
 const PricingSection = () => {
+  const [showCalculator, setShowCalculator] = useState(false);
+  
   const handlePayment = async (priceId: string) => {
     try {
       // Call the backend to create a checkout session
@@ -109,9 +112,37 @@ const PricingSection = () => {
           ))}
         </div>
         
-        <p className="text-center mt-10 text-gray-400">
-          Custom requests? <a href="#contact" className="text-kaizen-red hover:underline">Let's talk!</a>
-        </p>
+        <div className="flex flex-col items-center mt-14">
+          <p className="mb-4 text-xl text-gray-300">Need something more customized?</p>
+          
+          <button 
+            onClick={() => setShowCalculator(!showCalculator)}
+            className="text-white bg-gray-800 hover:bg-gray-700 px-6 py-3 rounded-lg flex items-center transition-colors mb-8"
+          >
+            {showCalculator ? 'Hide Calculator' : 'Use Our Price Calculator'}
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className={`h-5 w-5 ml-2 transition-transform transform ${showCalculator ? 'rotate-180' : ''}`} 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          
+          {showCalculator && (
+            <div className="w-full transition-all duration-300 ease-in-out">
+              <PricingCalculator />
+            </div>
+          )}
+          
+          <div className="mt-6 text-center">
+            <p className="text-center mt-10 text-gray-400">
+              Have questions? <a href="https://calendly.com/kaizen-digital/free-consultation" className="text-kaizen-red hover:underline">Book a free consultation</a> or <a href="#contact" className="text-kaizen-red hover:underline">contact us</a>.
+            </p>
+          </div>
+        </div>
       </div>
     </section>
   )
