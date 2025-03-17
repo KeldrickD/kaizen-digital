@@ -1,9 +1,10 @@
 "use client"
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 
-const ThankYouPage = () => {
+// Client component that uses the search params
+function ThankYouContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const sessionId = searchParams.get('session_id')
@@ -20,7 +21,7 @@ const ThankYouPage = () => {
         if (prev <= 1) {
           clearInterval(timer);
           // Redirect to your Google Form
-          window.location.href = 'https://forms.gle/yourFormLink';
+          window.location.href = 'https://forms.gle/KQGNwyWqHyVT9Bd16';
           return 0;
         }
         return prev - 1;
@@ -55,7 +56,7 @@ const ThankYouPage = () => {
           <p className="text-gray-400">
             If you're not redirected automatically, 
             <a 
-              href="https://forms.gle/yourFormLink" 
+              href="https://forms.gle/KQGNwyWqHyVT9Bd16" 
               className="text-kaizen-red hover:underline ml-1"
             >
               click here
@@ -67,4 +68,22 @@ const ThankYouPage = () => {
   )
 }
 
-export default ThankYouPage 
+// Loading fallback
+function Loading() {
+  return (
+    <div className="bg-kaizen-black min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <p className="text-xl text-white">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function ThankYouPage() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <ThankYouContent />
+    </Suspense>
+  )
+} 
