@@ -112,14 +112,14 @@ const ChatWidget = () => {
             <span onClick={toggleChat} className="cursor-pointer">✖</span>
           </div>
           
-          <div className="flex-1 p-4 overflow-y-auto">
+          <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
             {messages.map((message, index) => (
               <div 
                 key={index} 
                 className={`mb-2.5 p-2.5 rounded-[15px] max-w-[80%] break-words ${
                   message.isUser 
-                    ? 'bg-[#e6f2ff] ml-auto rounded-br-[4px]' 
-                    : 'bg-[#f0f0f0] mr-auto rounded-bl-[4px]'
+                    ? 'bg-[#e6f2ff] text-gray-800 ml-auto rounded-br-[4px]' 
+                    : 'bg-[#4a6cf7] text-white mr-auto rounded-bl-[4px]'
                 }`}
               >
                 {message.text}
@@ -127,10 +127,10 @@ const ChatWidget = () => {
             ))}
             
             {isTyping && (
-              <div className="flex p-2.5 mb-2.5 bg-[#f0f0f0] rounded-[15px] rounded-bl-[4px] mr-auto max-w-[80px]">
-                <span className="h-2.5 w-2.5 bg-gray-500 rounded-full mx-0.5 animate-bounce" style={{ animationDelay: '0s' }}></span>
-                <span className="h-2.5 w-2.5 bg-gray-500 rounded-full mx-0.5 animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                <span className="h-2.5 w-2.5 bg-gray-500 rounded-full mx-0.5 animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+              <div className="flex p-2.5 mb-2.5 bg-[#4a6cf7] rounded-[15px] rounded-bl-[4px] mr-auto max-w-[80px]">
+                <span className="h-2.5 w-2.5 bg-white rounded-full mx-0.5 animate-bounce" style={{ animationDelay: '0s' }}></span>
+                <span className="h-2.5 w-2.5 bg-white rounded-full mx-0.5 animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                <span className="h-2.5 w-2.5 bg-white rounded-full mx-0.5 animate-bounce" style={{ animationDelay: '0.4s' }}></span>
               </div>
             )}
             <div ref={messagesEndRef} />
