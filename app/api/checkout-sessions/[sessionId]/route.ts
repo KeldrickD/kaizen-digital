@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
 // Initialize Stripe with your secret key
@@ -7,11 +7,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 });
 
 export async function GET(
-  request: Request,
-  context: { params: { sessionId: string } }
+  request: NextRequest,
+  { params }: { params: { sessionId: string } }
 ) {
   try {
-    const sessionId = context.params.sessionId;
+    const sessionId = params.sessionId;
 
     if (!sessionId) {
       return NextResponse.json(
