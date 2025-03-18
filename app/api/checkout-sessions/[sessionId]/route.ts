@@ -6,18 +6,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: '2025-02-24.acacia',
 });
 
-type RouteParams = {
-  params: {
-    sessionId: string;
-  };
-};
-
 export async function GET(
   request: Request,
-  { params }: RouteParams
+  context: { params: { sessionId: string } }
 ) {
   try {
-    const sessionId = params.sessionId;
+    const sessionId = context.params.sessionId;
 
     if (!sessionId) {
       return NextResponse.json(
