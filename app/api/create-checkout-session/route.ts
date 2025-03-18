@@ -6,8 +6,16 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: '2025-02-24.acacia',
 });
 
+// Define package ID types for better type safety
+type PackageId = 'price_starter' | 'price_business' | 'price_elite' | 'custom';
+type PaymentType = 'full' | 'deposit';
+
 // Price information for standard packages
-const PACKAGE_INFO = {
+const PACKAGE_INFO: Record<Exclude<PackageId, 'custom'>, {
+  name: string;
+  amount: number;
+  description: string;
+}> = {
   price_starter: {
     name: 'Starter Site',
     amount: 75000, // $750.00 in cents
@@ -25,13 +33,20 @@ const PACKAGE_INFO = {
   }
 };
 
+// Standard deposit amount in cents ($500.00)
+const DEPOSIT_AMOUNT = 50000;
+
 export async function POST(request: Request) {
   try {
-    const { priceId, amount, packageDetails } = await request.json();
+    const { priceId, amount, packageDetails, paymentType = 'full' } = await request.json();
     let session;
     
     // Handle custom pricing
     if (priceId === 'custom') {
+      // Calculate the amount based on payment type
+      const paymentAmount = paymentType === 'deposit' ? DEPOSIT_AMOUNT : amount;
+      const remainingAmount = paymentType === 'deposit' ? amount - DEPOSIT_AMOUNT : 0;
+      
       // Create a session with custom price
       session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
@@ -40,14 +55,16 @@ export async function POST(request: Request) {
             price_data: {
               currency: 'usd',
               product_data: {
-                name: 'Custom Website Package',
+                name: paymentType === 'deposit' 
+                  ? 'Deposit for Custom Website Package' 
+                  : 'Custom Website Package',
                 description: `${packageDetails.pages} with ${packageDetails.features.join(', ')}${
                   packageDetails.maintenance !== 'None' 
                     ? ` and ${packageDetails.maintenance} maintenance`
                     : ''
-                }`,
+                }${paymentType === 'deposit' ? ' (Deposit payment)' : ''}`,
               },
-              unit_amount: amount, // Amount in cents
+              unit_amount: paymentAmount, // Amount in cents
             },
             quantity: 1,
           },
@@ -60,11 +77,14 @@ export async function POST(request: Request) {
           pages: packageDetails.pages,
           features: packageDetails.features.join(','),
           maintenance: packageDetails.maintenance,
+          paymentType,
+          totalAmount: amount.toString(),
+          remainingAmount: remainingAmount.toString(),
         },
       });
     } else {
       // Get package info based on priceId
-      const packageInfo = PACKAGE_INFO[priceId];
+      const packageInfo = PACKAGE_INFO[priceId as Exclude<PackageId, 'custom'>];
       
       if (!packageInfo) {
         return NextResponse.json(
@@ -72,6 +92,10 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
+      
+      // Calculate the amount based on payment type
+      const paymentAmount = paymentType === 'deposit' ? DEPOSIT_AMOUNT : packageInfo.amount;
+      const remainingAmount = paymentType === 'deposit' ? packageInfo.amount - DEPOSIT_AMOUNT : 0;
       
       // Create a dynamic price for the standard package
       session = await stripe.checkout.sessions.create({
@@ -81,10 +105,12 @@ export async function POST(request: Request) {
             price_data: {
               currency: 'usd',
               product_data: {
-                name: packageInfo.name,
-                description: packageInfo.description,
+                name: paymentType === 'deposit' 
+                  ? `Deposit for ${packageInfo.name}` 
+                  : packageInfo.name,
+                description: `${packageInfo.description}${paymentType === 'deposit' ? ' (Deposit payment)' : ''}`,
               },
-              unit_amount: packageInfo.amount,
+              unit_amount: paymentAmount,
             },
             quantity: 1,
           },
@@ -94,6 +120,9 @@ export async function POST(request: Request) {
         cancel_url: `${request.headers.get('origin')}?canceled=true`,
         metadata: {
           packageType: priceId,
+          paymentType,
+          totalAmount: packageInfo.amount.toString(),
+          remainingAmount: remainingAmount.toString(),
         },
       });
     }

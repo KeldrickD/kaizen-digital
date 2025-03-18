@@ -44,6 +44,7 @@ const PricingCalculator = () => {
   const [maintenance, setMaintenance] = useState<number>(0);
   const [totalPrice, setTotalPrice] = useState<number>(750);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [paymentType, setPaymentType] = useState<'full' | 'deposit'>('full');
   
   // Calculate total price when options change
   useEffect(() => {
@@ -87,7 +88,8 @@ const PricingCalculator = () => {
         body: JSON.stringify({ 
           priceId: 'custom', 
           amount: totalPrice * 100, // Stripe requires amount in cents
-          packageDetails 
+          packageDetails,
+          paymentType
         }),
       });
       
@@ -191,16 +193,45 @@ const PricingCalculator = () => {
         </p>
       </div>
       
-      <div className="mt-6 text-center">
+      <div className="mt-6">
+        <div className="flex items-center justify-center space-x-4 mb-4">
+          <div className="flex items-center">
+            <input
+              type="radio"
+              id="payment-full"
+              name="payment-type"
+              checked={paymentType === 'full'}
+              onChange={() => setPaymentType('full')}
+              className="w-4 h-4 text-kaizen-red bg-gray-700 border-gray-600"
+            />
+            <label htmlFor="payment-full" className="ml-2 text-sm font-medium text-gray-300">
+              Pay Full Amount (${totalPrice})
+            </label>
+          </div>
+          <div className="flex items-center">
+            <input
+              type="radio"
+              id="payment-deposit"
+              name="payment-type"
+              checked={paymentType === 'deposit'}
+              onChange={() => setPaymentType('deposit')}
+              className="w-4 h-4 text-kaizen-red bg-gray-700 border-gray-600"
+            />
+            <label htmlFor="payment-deposit" className="ml-2 text-sm font-medium text-gray-300">
+              Pay $500 Deposit
+            </label>
+          </div>
+        </div>
+        
         <button 
-          className="btn-primary"
+          className="btn-primary w-full"
           onClick={handleCustomPayment}
           disabled={isProcessing}
         >
-          {isProcessing ? 'Processing...' : 'Get Started With This Package'}
+          {isProcessing ? 'Processing...' : paymentType === 'full' ? 'Get Started With Full Payment' : 'Pay $500 Deposit Now'}
         </button>
-        <p className="mt-4 text-sm text-gray-400">
-          Like what you see? Contact us for a detailed quote or book a consultation below.
+        <p className="mt-4 text-sm text-gray-400 text-center">
+          {paymentType === 'deposit' ? 'Remaining balance will be due when your website is ready for review.' : 'Full payment includes all features selected above.'}
         </p>
       </div>
     </div>

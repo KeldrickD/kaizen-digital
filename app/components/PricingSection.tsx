@@ -47,16 +47,19 @@ const PricingSection = () => {
   const [showCalculator, setShowCalculator] = useState(false);
   const [processingTier, setProcessingTier] = useState<string | null>(null);
   
-  const handlePayment = async (priceId: string) => {
+  const handlePayment = async (priceId: string, paymentType: 'full' | 'deposit' = 'full') => {
     try {
       // Set loading state
-      setProcessingTier(priceId);
+      setProcessingTier(priceId + (paymentType === 'deposit' ? '-deposit' : ''));
       
       // Call the backend to create a checkout session
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ 
+          priceId,
+          paymentType
+        }),
       });
       
       if (!response.ok) {
@@ -116,13 +119,32 @@ const PricingSection = () => {
                 ))}
               </ul>
               
-              <button 
-                onClick={() => handlePayment(tier.priceId)}
-                className="btn-primary w-full"
-                disabled={processingTier === tier.priceId}
-              >
-                {processingTier === tier.priceId ? 'Processing...' : 'Get Your Website Now'}
-              </button>
+              <div className="space-y-3">
+                <button 
+                  onClick={() => handlePayment(tier.priceId, 'full')}
+                  className="btn-primary w-full"
+                  disabled={!!processingTier}
+                >
+                  {processingTier === tier.priceId ? 'Processing...' : 'Pay Full Amount'}
+                </button>
+                
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-700"></div>
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-black px-2 text-sm text-gray-400">OR</span>
+                  </div>
+                </div>
+                
+                <button 
+                  onClick={() => handlePayment(tier.priceId, 'deposit')}
+                  className="w-full px-4 py-2 border border-kaizen-red text-kaizen-red rounded hover:bg-kaizen-red hover:bg-opacity-10 transition-colors"
+                  disabled={!!processingTier}
+                >
+                  {processingTier === tier.priceId + '-deposit' ? 'Processing...' : 'Pay $500 Deposit'}
+                </button>
+              </div>
             </div>
           ))}
         </div>
