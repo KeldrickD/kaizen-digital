@@ -5,8 +5,8 @@ import { loadStripe } from '@stripe/stripe-js'
 import { toast } from 'react-hot-toast'
 
 // Initialize Stripe
-const stripePromise = process.env.STRIPE_PUBLIC_KEY 
-  ? loadStripe(process.env.STRIPE_PUBLIC_KEY) 
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) 
   : null
 
 type CalculatorOption = {

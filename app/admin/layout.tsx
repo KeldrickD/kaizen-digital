@@ -10,7 +10,8 @@ import {
   FaCalendarAlt, 
   FaCog,
   FaBars,
-  FaTimes
+  FaTimes,
+  FaMoneyBillWave
 } from 'react-icons/fa';
 
 export default function AdminLayout({
@@ -73,6 +74,12 @@ export default function AdminLayout({
                 icon={<FaComments />} 
                 text="Messaging" 
                 active={isActive('/admin/messaging')}
+              />
+              <SidebarLink 
+                href="/admin/payments" 
+                icon={<FaMoneyBillWave />} 
+                text="Payments" 
+                active={isActive('/admin/payments')}
               />
               <SidebarLink 
                 href="/admin/appointments" 

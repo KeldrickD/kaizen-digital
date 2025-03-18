@@ -1,16 +1,22 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
+import { FaRegPaperPlane, FaTimes, FaComment, FaRegClock } from 'react-icons/fa';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Message {
+  id: string;
   text: string;
-  isUser: boolean;
+  sender: 'user' | 'bot';
+  timestamp: Date;
+  type?: 'text' | 'quickReplies' | 'pricing' | 'email' | 'phone';
   quickReplies?: string[];
-  type?: 'text' | 'pricing' | 'cta' | 'payment-options';
-  ctaLink?: string;
-  ctaText?: string;
-  packageType?: string;
-  packagePrice?: number;
+  pricing?: {
+    tier: string;
+    price: string;
+    features: string[];
+    cta: string;
+  }[];
 }
 
 interface PaymentOption {
@@ -21,25 +27,47 @@ interface PaymentOption {
   description: string;
 }
 
+// New interface for lead qualification data
+interface QualificationData {
+  hasWebsite: boolean | null;
+  mainGoal: string | null;
+  timeline: string | null;
+  budget: string | null;
+  industry: string | null;
+  qualified: boolean;
+}
+
 const ChatWidget = () => {
-  // State
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [messageInput, setMessageInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [userId, setUserId] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
+  const [inputValue, setInputValue] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [isValidEmail, setIsValidEmail] = useState(false);
   const [showEmailInput, setShowEmailInput] = useState(false);
-  const [lastInteraction, setLastInteraction] = useState<Date | null>(null);
-  const [selectedPackage, setSelectedPackage] = useState<{type: string, price: number} | null>(null);
-  const [paymentLinks, setPaymentLinks] = useState<{deposit: string, full: string} | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState<'none' | 'deposit_paid' | 'full_paid'>('none');
+  const [userId, setUserId] = useState('');
+  const [hasScheduledFollowUp, setHasScheduledFollowUp] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // New state for lead qualification
+  const [qualificationData, setQualificationData] = useState<QualificationData>({
+    hasWebsite: null,
+    mainGoal: null,
+    timeline: null,
+    budget: null,
+    industry: null,
+    qualified: false
+  });
+  
+  // New state for phone input and communication preference
+  const [phone, setPhone] = useState('');
+  const [showPhoneInput, setShowPhoneInput] = useState(false);
+  const [preferredChannel, setPreferredChannel] = useState<'email' | 'whatsapp' | 'sms' | null>(null);
 
   // Configuration with real values
   const API_URL = 'https://lead-gen-bot.onrender.com/api/chat';
   const API_KEY = '039d4b24647bbb106ae1e0595f3692b9e48402cddf85424f944bf0d65f499263';
   const PAYMENT_API_URL = '/api/payment-options'; // Endpoint to be created
+  const TWILIO_API_URL = '/api/messaging'; // New endpoint for messaging
 
   // Website packages and pricing
   const pricingOptions = [
@@ -48,694 +76,1105 @@ const ChatWidget = () => {
     { name: 'Elite Custom Site', price: 2500, description: 'Full branding, custom features, automation' }
   ];
 
-  // Initialize user ID
   useEffect(() => {
-    let storedUserId = localStorage.getItem('chat_user_id');
-    if (!storedUserId) {
-      storedUserId = 'user_' + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('chat_user_id', storedUserId);
+    // Generate a unique user ID on first load
+    if (!userId) {
+      const newUserId = uuidv4();
+      setUserId(newUserId);
+      
+      // Store the user ID in local storage
+      localStorage.setItem('kaizen_chat_user_id', newUserId);
     }
-    setUserId(storedUserId);
     
-    // Check if user has existing payment status
-    checkPaymentStatus(storedUserId);
+    // Check if we should start with the widget open
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('chat') === 'open') {
+      setIsOpen(true);
+    }
   }, []);
 
-  // Check payment status from backend
-  const checkPaymentStatus = async (userId: string) => {
-    try {
-      const response = await fetch(`${PAYMENT_API_URL}/status?userId=${userId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setPaymentStatus(data.status || 'none');
-        
-        // If payment was made, update UI accordingly
-        if (data.status === 'deposit_paid' || data.status === 'full_paid') {
-          showPostPaymentMessages(data.status);
-        }
-      }
-    } catch (error) {
-      console.error('Error checking payment status:', error);
-    }
-  };
-
-  // Show appropriate messages after payment
-  const showPostPaymentMessages = (status: string) => {
-    if (status === 'deposit_paid') {
-      setMessages([{
-        text: "Thanks for your deposit! I've sent the intake form to your email. To complete your website project, please fill it out as soon as possible.",
-        isUser: false,
-        quickReplies: ["I need help with the form", "When do I pay the rest?"]
-      }]);
-    } else if (status === 'full_paid') {
-      setMessages([{
-        text: "Thank you for your payment! Your project is now prioritized for completion within 48 hours. I've sent the intake form to your email - please fill it out as soon as possible so we can get started right away!",
-        isUser: false,
-        quickReplies: ["I need help with the form", "What happens next?"]
-      }]);
-    }
-  };
-
-  // Add welcome message when chat is opened for the first time
   useEffect(() => {
-    if (isChatOpen && messages.length === 0) {
-      // Show different message based on payment status
-      if (paymentStatus === 'none') {
-        setMessages([{ 
-          text: "Hey there! Welcome to Kaizen Digital. I'm your AI assistant, here to help you get an awesome website in 48 hours! 🚀", 
-          isUser: false,
-          quickReplies: [
-            "I need a website",
-            "How much does it cost?",
-            "Tell me more about your services",
-            "I have a question"
-          ]
-        }]);
-      } else {
-        showPostPaymentMessages(paymentStatus);
-      }
-    }
-  }, [isChatOpen, messages.length, paymentStatus]);
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    // Scroll to bottom whenever messages change
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  // Set up follow-up messages
+  
   useEffect(() => {
-    if (!lastInteraction || paymentStatus !== 'none') return;
-    
-    // Follow up after 1 hour
-    const oneHourTimeout = setTimeout(() => {
-      sendFollowUpMessage("Hey! Just checking in. Do you have any questions before you get started? I'd love to help!");
-    }, 60 * 60 * 1000); // 1 hour
-    
-    // Follow up after 24 hours
-    const oneDayTimeout = setTimeout(() => {
-      sendFollowUpMessage("I still have a slot available for you! Let's get your website live this week. Want me to hold your spot?");
-    }, 24 * 60 * 60 * 1000); // 24 hours
-    
-    // Follow up after 3 days
-    const threeDayTimeout = setTimeout(() => {
-      sendFollowUpMessage("Last call! My current openings are filling up fast. If you want your website ready this week, now's the time to start!");
-    }, 3 * 24 * 60 * 60 * 1000); // 3 days
-    
-    return () => {
-      clearTimeout(oneHourTimeout);
-      clearTimeout(oneDayTimeout);
-      clearTimeout(threeDayTimeout);
-    };
-  }, [lastInteraction, paymentStatus]);
-
-  // Set up deposit payment reminder if deposit was paid
-  useEffect(() => {
-    if (paymentStatus !== 'deposit_paid') return;
-    
-    // Remind after 3 days
-    const reminderTimeout = setTimeout(() => {
-      sendFollowUpMessage("Just a friendly reminder about your website project! To complete the process, you'll need to pay the remaining balance before we can launch your site. Let me know if you need the payment link again!");
-    }, 3 * 24 * 60 * 60 * 1000); // 3 days
-    
-    return () => {
-      clearTimeout(reminderTimeout);
-    };
-  }, [paymentStatus]);
-
-  const sendFollowUpMessage = (message: string) => {
-    // In a real implementation, this would send an email or notification
-    console.log("Follow-up:", message);
-    
-    // Also store in database for future reference
-    storeLeadInteraction(userId, 'follow_up', { message });
-  };
-
-  // Store interactions in database
-  const storeLeadInteraction = async (userId: string, type: string, data: any) => {
-    try {
-      await fetch(`${PAYMENT_API_URL}/interaction`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          type,
-          data,
-          timestamp: new Date().toISOString()
-        })
-      });
-    } catch (error) {
-      console.error('Error storing interaction:', error);
+    // Add initial greeting when chat is opened
+    if (isOpen && messages.length === 0) {
+      // Send initial greeting with quick replies
+      setTimeout(() => {
+        setMessages([
+          {
+            id: uuidv4(),
+            text: "👋 Hi there! I'm the Kaizen Digital assistant. How can I help you today?",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quickReplies',
+            quickReplies: [
+              "I have a question",
+              "Show me pricing",
+              "Book a consultation"
+            ]
+          }
+        ]);
+      }, 500);
     }
-  };
+  }, [isOpen]);
 
-  const toggleChat = () => {
-    setIsChatOpen(!isChatOpen);
-  };
-
-  // Generate payment links for a specific package
-  const generatePaymentLinks = async (packageType: string, packagePrice: number) => {
-    setIsTyping(true);
+  // Validate email
+  useEffect(() => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    setIsValidEmail(emailRegex.test(email));
+  }, [email]);
+  
+  // Store lead data when qualification data changes
+  useEffect(() => {
+    if (userId && (qualificationData.hasWebsite !== null || qualificationData.mainGoal !== null)) {
+      storeLead();
+    }
+  }, [qualificationData, email, phone, preferredChannel]);
+  
+  // Function to store lead data
+  const storeLead = async () => {
     try {
-      const response = await fetch(`${PAYMENT_API_URL}/create`, {
+      const response = await fetch('/api/leads/store', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId,
-          email: email || null,
-          packageType,
-          packagePrice,
-          depositAmount: 500
-        })
+          id: userId,
+          email: email || undefined,
+          phone: phone || undefined,
+          preferredChannel,
+          qualification: qualificationData,
+          interaction: {
+            type: 'chat_update',
+            data: { messages: messages.length }
+          }
+        }),
       });
-      
-      if (!response.ok) {
-        throw new Error('Failed to generate payment links');
-      }
       
       const data = await response.json();
-      setPaymentLinks(data.links);
+      console.log('Lead data stored:', data);
       
-      // Show payment options
-      const newMessages = [...messages, {
-        text: "Great! I have two payment options for you:",
-        isUser: false,
-        type: 'payment-options' as const,
-        packageType,
-        packagePrice
-      }];
-      
-      setMessages(newMessages);
-      setSelectedPackage({ type: packageType, price: packagePrice });
-      
+      // Schedule follow-up if we have contact info and haven't scheduled one yet
+      if ((email || phone) && preferredChannel && !hasScheduledFollowUp && 
+          (qualificationData.hasWebsite !== null || qualificationData.mainGoal !== null)) {
+        scheduleFollowUp('24h');
+      }
     } catch (error) {
-      console.error('Error generating payment links:', error);
-      setMessages([...messages, {
-        text: "I'm having trouble generating payment options right now. Could you try again in a moment?",
-        isUser: false
-      }]);
+      console.error('Error storing lead data:', error);
     }
-    setIsTyping(false);
+  };
+  
+  // Function to schedule follow-up messages
+  const scheduleFollowUp = async (timing: 'immediate' | '24h' | '3d' | '7d') => {
+    if (!preferredChannel || (!email && !phone)) return;
+    
+    try {
+      const contactInfo = preferredChannel === 'email' ? email : phone;
+      
+      const response = await fetch('/api/messaging/schedule', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipient: contactInfo,
+          channel: preferredChannel,
+          userId,
+          qualificationData,
+          scheduleTiming: timing
+        }),
+      });
+      
+      const data = await response.json();
+      console.log('Follow-up scheduled:', data);
+      setHasScheduledFollowUp(true);
+      
+      // If we've qualified the lead as high-intent, also schedule more follow-ups
+      if (qualificationData.qualified) {
+        // Schedule additional follow-ups
+        await fetch('/api/messaging/schedule', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            recipient: contactInfo,
+            channel: preferredChannel,
+            userId,
+            qualificationData,
+            scheduleTiming: '3d'
+          }),
+        });
+        
+        await fetch('/api/messaging/schedule', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            recipient: contactInfo,
+            channel: preferredChannel,
+            userId,
+            qualificationData,
+            scheduleTiming: '7d'
+          }),
+        });
+      }
+    } catch (error) {
+      console.error('Error scheduling follow-up:', error);
+    }
+  };
+  
+  // New function to send cross-platform message
+  const sendCrossPlatformMessage = async (message: string) => {
+    if (!preferredChannel || (!email && !phone)) return;
+    
+    try {
+      const contactInfo = preferredChannel === 'email' ? email : phone;
+      
+      const response = await fetch('/api/messaging/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipient: contactInfo,
+          channel: preferredChannel,
+          message,
+          userId
+        }),
+      });
+      
+      const data = await response.json();
+      console.log('Message sent via ' + preferredChannel + ':', data);
+    } catch (error) {
+      console.error('Error sending cross-platform message:', error);
+    }
   };
 
-  // Process payment selection
-  const handlePaymentOptionSelect = async (optionType: 'deposit' | 'full') => {
-    if (!paymentLinks) return;
+  // Start qualification flow
+  const startQualification = () => {
+    // Ask if they have a website
+    addMessage({
+      id: uuidv4(),
+      text: "Let me ask you a few quick questions to better understand your needs. Do you currently have a website?",
+      sender: 'bot',
+      timestamp: new Date(),
+      type: 'quickReplies',
+      quickReplies: ["Yes", "No"]
+    });
+  };
+
+  // Handle user message submission
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
     
-    const paymentUrl = optionType === 'deposit' ? paymentLinks.deposit : paymentLinks.full;
+    if (inputValue.trim() === '') return;
     
-    // Record selection
-    storeLeadInteraction(userId, 'payment_selection', {
-      optionType,
-      packageType: selectedPackage?.type,
-      packagePrice: selectedPackage?.price
+    // Add user message
+    addMessage({
+      id: uuidv4(),
+      text: inputValue,
+      sender: 'user',
+      timestamp: new Date()
     });
     
-    // Add message showing selection
-    setMessages([...messages, {
-      text: optionType === 'deposit' 
-        ? "I'd like to pay the $500 deposit" 
-        : "I'd like to pay the full amount",
-      isUser: true
-    }, {
-      text: optionType === 'deposit'
-        ? "Great! I'm redirecting you to our secure payment page to make your $500 deposit. After payment, I'll send you the intake form to gather all the details for your website."
-        : "Excellent choice! I'm redirecting you to our secure payment page to make your full payment. This will prioritize your project for completion within 48 hours. After payment, I'll send you the intake form.",
-      isUser: false,
-      type: 'cta',
-      ctaLink: paymentUrl,
-      ctaText: optionType === 'deposit' ? "Pay $500 Deposit" : `Pay Full Amount ($${selectedPackage?.price})`
-    }]);
+    setInputValue('');
+    
+    // Handle email collection if showing email input
+    if (showEmailInput) {
+      handleEmailSubmission(inputValue);
+      return;
+    }
+    
+    // Handle phone collection if showing phone input
+    if (showPhoneInput) {
+      handlePhoneSubmission(inputValue);
+      return;
+    }
+    
+    // Process user message
+    processUserMessage(inputValue);
   };
 
-  // Handle quick reply selection
-  const handleQuickReply = (reply: string) => {
-    // Add user message
-    const newMessages = [...messages, { text: reply, isUser: true }];
-    setMessages(newMessages);
-    setLastInteraction(new Date());
+  // Process user message logic
+  const processUserMessage = (message: string) => {
+    const lowerMessage = message.toLowerCase();
     
-    // Store interaction
-    storeLeadInteraction(userId, 'quick_reply', { reply });
-    
-    // Process the reply
-    setTimeout(() => {
-      switch(reply) {
-        case "I need a website":
-          setMessages([...newMessages, {
-            text: "Awesome! What type of website are you looking for?",
-            isUser: false,
-            quickReplies: [
-              "Business Website",
-              "E-commerce Store",
-              "Portfolio/Personal Website",
-              "Custom Project"
-            ]
-          }]);
-          break;
-          
-        case "Business Website":
-        case "E-commerce Store":
-        case "Portfolio/Personal Website":
-        case "Custom Project":
-          let packagePrice = 1500; // Default to Business Pro
-          if (reply === "Business Website") packagePrice = 1500;
-          else if (reply === "E-commerce Store") packagePrice = 2500;
-          else if (reply === "Portfolio/Personal Website") packagePrice = 750;
-          else if (reply === "Custom Project") packagePrice = 2500;
-          
-          setMessages([...newMessages, {
-            text: `Great choice! I can get that ${reply.toLowerCase()} built for you in just 48 hours. Let me show you the pricing so we can get started.`,
-            isUser: false,
-            type: 'pricing'
-          }]);
-          
-          // Ask for email if we don't have it yet
-          if (!email) {
-            setMessages(prev => [...prev, {
-              text: "To provide you with payment options, could you please share your email address?",
-              isUser: false
-            }]);
-            setShowEmailInput(true);
-          } else {
-            // Generate payment links if we already have email
-            generatePaymentLinks(reply, packagePrice);
-          }
-          break;
-          
-        case "How much does it cost?":
-          setMessages([...newMessages, {
-            text: "Great question! Our pricing is simple and transparent. Here's a quick breakdown:",
-            isUser: false,
-            type: 'pricing'
-          }, {
-            text: "Which package are you interested in?",
-            isUser: false,
-            quickReplies: [
-              "Starter Website",
-              "Business Pro",
-              "Elite Custom Site"
-            ]
-          }]);
-          break;
-          
-        case "Starter Website":
-          generatePaymentLinks("Starter Website", 750);
-          break;
-          
-        case "Business Pro":
-          generatePaymentLinks("Business Pro", 1500);
-          break;
-          
-        case "Elite Custom Site":
-          generatePaymentLinks("Elite Custom Site", 2500);
-          break;
-          
-        case "Tell me more about your services":
-          setMessages([...newMessages, {
-            text: "We specialize in high-performance websites that help businesses grow. Here's what you get with every website:\n✅ Mobile-Optimized & Fast-Loading\n✅ SEO & Lead Generation Ready\n✅ Custom Branding & Sleek Design\n✅ Conversion-Focused Strategy",
-            isUser: false
-          }, {
-            text: "Would you like to see our pricing options?",
-            isUser: false,
-            quickReplies: [
-              "Show me pricing",
-              "I have a question"
-            ]
-          }]);
-          break;
-          
-        case "Show me pricing":
-          setMessages([...newMessages, {
-            text: "Here's our simple and transparent pricing:",
-            isUser: false,
-            type: 'pricing'
-          }, {
-            text: "Which package are you interested in?",
-            isUser: false,
-            quickReplies: [
-              "Starter Website",
-              "Business Pro",
-              "Elite Custom Site"
-            ]
-          }]);
-          break;
-          
-        case "I have a question":
-          setMessages([...newMessages, {
-            text: "Sure! What would you like to ask? I can help with pricing, features, timelines, or anything else.",
-            isUser: false,
-            quickReplies: [
-              "Book a consultation",
-              "Show me pricing"
-            ]
-          }, {
-            text: "Drop your email here and I'll follow up with more details if you need.",
-            isUser: false
-          }]);
-          setShowEmailInput(true);
-          break;
-          
-        case "I need help with the form":
-          setMessages([...newMessages, {
-            text: "No problem! The intake form helps us gather all the details we need to build your website. If you're having trouble with any questions, feel free to respond with 'as discussed' for now, and we'll follow up to clarify those points. Is there a specific section you need help with?",
-            isUser: false,
-            quickReplies: [
-              "Content questions",
-              "Design preferences",
-              "Technical questions"
-            ]
-          }]);
-          break;
-          
-        case "When do I pay the rest?":
-          setMessages([...newMessages, {
-            text: "The remaining balance will be due before we launch your website. We'll send you a reminder with a payment link about 3 days before your scheduled launch date. You'll have a chance to review the site before making the final payment.",
-            isUser: false,
-            quickReplies: [
-              "What happens next?",
-              "I need help with the form"
-            ]
-          }]);
-          break;
-          
-        case "What happens next?":
-          setMessages([...newMessages, {
-            text: "Here's what happens next:\n1️⃣ Complete the intake form I emailed you\n2️⃣ Our design team will review your information\n3️⃣ We'll create your website in 48 hours\n4️⃣ You'll receive a preview link to review\n5️⃣ After your approval, we'll launch your site!",
-            isUser: false,
-            quickReplies: [
-              "How long until launch?",
-              "I need help with the form"
-            ]
-          }]);
-          break;
-          
-        case "Back to main menu":
-          setMessages([...newMessages, {
-            text: "What would you like to know about?",
-            isUser: false,
-            quickReplies: [
-              "I need a website",
-              "How much does it cost?",
-              "Tell me more about your services",
-              "I have a question"
-            ]
-          }]);
-          break;
-          
-        case "Book a consultation":
-          setMessages([...newMessages, {
-            text: "Great! If you'd like to speak with one of our web experts, you can book a free 10-minute consultation to discuss your project in detail.",
-            isUser: false,
-            type: 'cta',
-            ctaLink: "https://calendly.com/kaizen-digital/free-consultation",
-            ctaText: "Book a Free Consultation"
-          }]);
-          break;
-          
-        default:
-          // For any other reply, use the API
-          sendMessage(reply);
+    // Check for common intents
+    if (lowerMessage.includes('pricing') || lowerMessage.includes('cost') || lowerMessage.includes('price')) {
+      showPricing();
+    } else if (lowerMessage.includes('consult') || lowerMessage.includes('book') || lowerMessage.includes('appointment')) {
+      bookConsultation();
+    } else if (lowerMessage.includes('contact') || lowerMessage.includes('talk') || lowerMessage.includes('person')) {
+      collectContactInfo();
+    } else {
+      // Default to qualification if we don't have that data yet
+      if (qualificationData.hasWebsite === null) {
+        startQualification();
+      } else {
+        // Generic response
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "Thanks for your message! To best help you, I'd recommend either checking our pricing options or booking a free consultation with our team.",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quickReplies',
+            quickReplies: ["Show me pricing", "Book a consultation"]
+          });
+        }, 500);
       }
+    }
+  };
+
+  // Handle quick replies
+  const handleQuickReply = (reply: string) => {
+    // Add user quick reply as a message
+    addMessage({
+      id: uuidv4(),
+      text: reply,
+      sender: 'user',
+      timestamp: new Date()
+    });
+    
+    // Process the quick reply
+    switch (reply) {
+      case "I have a question":
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "Great! I'd be happy to help. What would you like to know?",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quickReplies',
+            quickReplies: ["Book a consultation", "Show me pricing"]
+          });
+        }, 500);
+        break;
+        
+      case "Show me pricing":
+        showPricing();
+        break;
+        
+      case "Book a consultation":
+        bookConsultation();
+        break;
+        
+      // Website qualification question replies
+      case "Yes":
+        // They have a website - update qualification data
+        setQualificationData({
+          ...qualificationData,
+          hasWebsite: true
+        });
+        
+        // Ask about their main goal
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "Great! What's your main goal for improving your website?",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quickReplies',
+            quickReplies: [
+              "Get more customers",
+              "Sell products online",
+              "Build brand awareness"
+            ]
+          });
+        }, 500);
+        break;
+        
+      case "No":
+        // They don't have a website - update qualification data
+        setQualificationData({
+          ...qualificationData,
+          hasWebsite: false
+        });
+        
+        // Ask about their main goal
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "I see! What's your main goal for your new website?",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quickReplies',
+            quickReplies: [
+              "Get more customers",
+              "Sell products online",
+              "Build brand awareness"
+            ]
+          });
+        }, 500);
+        break;
+        
+      // Main goal qualification replies
+      case "Get more customers":
+      case "Sell products online":
+      case "Build brand awareness":
+        // Update qualification data with their goal
+        setQualificationData({
+          ...qualificationData,
+          mainGoal: reply
+        });
+        
+        // Ask about their timeline
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "When are you looking to launch or update your website?",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quickReplies',
+            quickReplies: [
+              "ASAP",
+              "Within 1 month",
+              "Within 3 months",
+              "Just exploring"
+            ]
+          });
+        }, 500);
+        break;
+        
+      // Timeline qualification replies
+      case "ASAP":
+      case "Within 1 month":
+      case "Within 3 months":
+      case "Just exploring":
+        // Update qualification data with their timeline
+        setQualificationData({
+          ...qualificationData,
+          timeline: reply
+        });
+        
+        // Ask about their industry
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "What industry is your business in?",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quickReplies',
+            quickReplies: [
+              "E-commerce",
+              "Professional Services",
+              "Healthcare",
+              "Real Estate",
+              "Other"
+            ]
+          });
+        }, 500);
+        break;
+        
+      // Industry qualification replies
+      case "E-commerce":
+      case "Professional Services":
+      case "Healthcare":
+      case "Real Estate":
+      case "Other":
+        // Update qualification data with their industry
+        setQualificationData(prev => ({
+          ...prev,
+          industry: reply
+        }));
+        
+        // If they need it ASAP or soon, they're qualified (based on timeline from previous step)
+        const isQualified = qualificationData.timeline === "ASAP" || qualificationData.timeline === "Within 1 month";
+        setQualificationData(prev => ({
+          ...prev,
+          qualified: isQualified
+        }));
+        
+        // For qualified leads, push pricing and consultation
+        if (isQualified) {
+          setTimeout(() => {
+            addMessage({
+              id: uuidv4(),
+              text: `Thanks for sharing that! Based on your needs in the ${reply.toLowerCase()} industry, I think our team can definitely help you. Would you like to see our pricing options or schedule a free consultation to discuss your project in detail?`,
+              sender: 'bot',
+              timestamp: new Date(),
+              type: 'quickReplies',
+              quickReplies: [
+                "Show me pricing",
+                "Book a consultation"
+              ]
+            });
+          }, 500);
+        } else {
+          // For longer-term prospects, collect contact info for nurturing
+          setTimeout(() => {
+            addMessage({
+              id: uuidv4(),
+              text: `Thanks for sharing that! We have experience working with ${reply.toLowerCase()} businesses and would be happy to keep you updated with resources and tips as you explore your options. What's the best way to stay in touch?`,
+              sender: 'bot',
+              timestamp: new Date(),
+              type: 'quickReplies',
+              quickReplies: [
+                "Email",
+                "WhatsApp",
+                "SMS"
+              ]
+            });
+          }, 500);
+        }
+        break;
+        
+      // Contact preference replies
+      case "Email":
+        setPreferredChannel('email');
+        collectEmail();
+        break;
+        
+      case "WhatsApp":
+        setPreferredChannel('whatsapp');
+        collectPhone();
+        break;
+        
+      case "SMS":
+        setPreferredChannel('sms');
+        collectPhone();
+        break;
+        
+      case "Yes, please":
+        // Handle consultation reminder request
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "Great! I'll send you a reminder before your scheduled consultation.",
+            sender: 'bot',
+            timestamp: new Date()
+          });
+          
+          // Send an immediate confirmation
+          sendCrossPlatformMessage("Thank you for scheduling a consultation with Kaizen Digital! This message confirms we'll send you a reminder before your appointment.");
+          
+          // Schedule a follow-up reminder (would be tied to actual consultation date in production)
+          scheduleFollowUp('immediate');
+        }, 500);
+        break;
+        
+      case "No, thanks":
+        // Handle declined reminder
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "No problem! If you have any questions before your consultation, feel free to ask here anytime.",
+            sender: 'bot',
+            timestamp: new Date()
+          });
+        }, 500);
+        break;
+        
+      // Budget constraint replies
+      case "I'm flexible":
+      case "Need to stay within budget":
+      case "Need it fast":
+      case "No constraints":
+        handleConstraints(reply);
+        break;
+        
+      // Deposit option replies
+      case "Yes, that works":
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "Great! To proceed with the 50% deposit option, we'll need to set up a brief consultation to discuss your project details. Would you like to schedule that now?",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quickReplies',
+            quickReplies: ["Book a consultation", "Contact me later"]
+          });
+        }, 500);
+        break;
+        
+      case "I'd prefer other options":
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "We also offer monthly payment plans that might work better for your budget. Let's schedule a consultation to discuss your project and find a payment structure that works for you.",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quickReplies',
+            quickReplies: ["Book a consultation", "Send payment info"]
+          });
+        }, 500);
+        break;
+        
+      case "Yes, tell me more":
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "Our expedited service includes dedicated resources and priority support. For your selected package, this would reduce delivery time from 4-6 weeks to 2-3 weeks. Would you like to schedule a consultation to discuss this option?",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quickReplies',
+            quickReplies: ["Book a consultation", "Ask a question"]
+          });
+        }, 500);
+        break;
+        
+      case "No, standard timeline is fine":
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "Understood! Our standard timeline still offers great value and quality. Would you like to schedule a consultation to discuss your project details?",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quickReplies',
+            quickReplies: ["Book a consultation", "Ask a question"]
+          });
+        }, 500);
+        break;
+        
+      case "Contact me later":
+        collectContactInfo();
+        break;
+        
+      case "Send payment info":
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "I'd be happy to send you our payment options. What's the best way to reach you?",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quickReplies',
+            quickReplies: ["Email", "WhatsApp", "SMS"]
+          });
+        }, 500);
+        break;
+        
+      default:
+        // Default response for unhandled quick replies
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "Thank you! Is there anything specific you'd like to know about our services?",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quickReplies',
+            quickReplies: ["Show me pricing", "Book a consultation"]
+          });
+        }, 500);
+    }
+  };
+
+  // Show pricing options
+  const showPricing = () => {
+    setTimeout(() => {
+      addMessage({
+        id: uuidv4(),
+        text: "Here are our website packages. Which one interests you?",
+        sender: 'bot',
+        timestamp: new Date(),
+        type: 'pricing',
+        pricing: [
+          {
+            tier: "Basic",
+            price: "$1,499",
+            features: [
+              "5-page responsive website",
+              "Basic SEO setup",
+              "Contact form",
+              "2 rounds of revisions"
+            ],
+            cta: "Choose Basic"
+          },
+          {
+            tier: "Business",
+            price: "$2,999",
+            features: [
+              "10-page responsive website",
+              "Advanced SEO package",
+              "Live chat integration",
+              "Content creation",
+              "Social media integration"
+            ],
+            cta: "Choose Business"
+          },
+          {
+            tier: "Enterprise",
+            price: "$5,999+",
+            features: [
+              "Custom website development",
+              "E-commerce functionality",
+              "Payment processing",
+              "Custom integrations",
+              "Full SEO & analytics suite"
+            ],
+            cta: "Choose Enterprise"
+          }
+        ]
+      });
     }, 500);
   };
 
-  const handleEmailSubmit = () => {
-    if (!email || !email.includes('@')) return;
-    
-    setMessages([...messages, { 
-      text: `Thanks ${email}! Now I can provide you with personalized options.`,
-      isUser: false
-    }]);
-    setShowEmailInput(false);
-    setLastInteraction(new Date());
-    
-    // Store the email
-    storeLeadInteraction(userId, 'email_capture', { email });
-    
-    // If we have a selected package, generate payment links
-    if (selectedPackage) {
-      generatePaymentLinks(selectedPackage.type, selectedPackage.price);
-    } else {
-      // Otherwise continue the conversation
-      setMessages(prev => [...prev, {
-        text: "What type of website are you looking for?",
-        isUser: false,
-        quickReplies: [
-          "Business Website",
-          "E-commerce Store",
-          "Portfolio/Personal Website",
-          "Custom Project"
-        ]
-      }]);
-    }
-  };
-
-  const sendMessage = async (message = messageInput) => {
-    if (!message.trim()) return;
-
-    // Add user message
-    const newMessages = [...messages, { text: message, isUser: true }];
-    setMessages(newMessages);
-    setMessageInput('');
-    setIsTyping(true);
-    setLastInteraction(new Date());
-    
-    // Store the message
-    storeLeadInteraction(userId, 'message', { message });
-
-    try {
-      // Send request to API
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': API_KEY
-        },
-        body: JSON.stringify({
-          message: message,
-          user_id: userId
-        })
+  // Book a consultation
+  const bookConsultation = () => {
+    setTimeout(() => {
+      addMessage({
+        id: uuidv4(),
+        text: "Great choice! Let's set up a free 10-minute consultation to discuss your project. You can schedule a time that works for you using the link below:",
+        sender: 'bot',
+        timestamp: new Date()
       });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const data = await response.json();
-      setIsTyping(false);
       
-      // Add API response
-      setMessages([...newMessages, { 
-        text: data.message, 
-        isUser: false,
-        // Add quick replies for some API responses
-        quickReplies: newMessages.length % 3 === 0 ? [
-          "How much does it cost?",
-          "Tell me more about your services"
-        ] : undefined
-      }]);
-    } catch (error) {
-      setIsTyping(false);
-      setMessages([
-        ...newMessages, 
-        { text: 'Sorry, I encountered an error. Please try again later.', isUser: false }
-      ]);
-      console.error('Error:', error);
-    }
+      setTimeout(() => {
+        addMessage({
+          id: uuidv4(),
+          text: "https://calendly.com/kaizen-digital/free-consultation",
+          sender: 'bot',
+          timestamp: new Date()
+        });
+        
+        // If we have contact info, offer to send a reminder
+        if (preferredChannel && (email || phone)) {
+          setTimeout(() => {
+            addMessage({
+              id: uuidv4(),
+              text: "Would you like me to send you a reminder about your consultation?",
+              sender: 'bot',
+              timestamp: new Date(),
+              type: 'quickReplies',
+              quickReplies: ["Yes, please", "No, thanks"]
+            });
+          }, 500);
+        } else {
+          // If we don't have contact info, ask for it
+          setTimeout(() => {
+            addMessage({
+              id: uuidv4(),
+              text: "To make sure you don't miss your consultation, I can send you a reminder. What's the best way to contact you?",
+              sender: 'bot',
+              timestamp: new Date(),
+              type: 'quickReplies',
+              quickReplies: ["Email", "WhatsApp", "SMS"]
+            });
+          }, 1000);
+        }
+      }, 500);
+    }, 500);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      if (showEmailInput) {
-        handleEmailSubmit();
-      } else {
-        sendMessage();
-      }
-    }
-  };
-
-  // Render pricing component
-  const renderPricing = () => (
-    <div className="bg-white rounded-lg p-2 mt-2 mb-4 shadow-sm">
-      {pricingOptions.map((option, index) => (
-        <div key={index} className="mb-2 pb-2 border-b border-gray-100 last:border-0">
-          <div className="font-bold text-gray-800">{option.name} – ${option.price}</div>
-          <div className="text-sm text-gray-600">{option.description}</div>
-        </div>
-      ))}
-    </div>
-  );
-
-  // Render payment options
-  const renderPaymentOptions = (packageType: string, packagePrice: number) => {
-    const paymentOptions: PaymentOption[] = [
-      {
-        id: 'deposit',
-        type: 'deposit',
-        amount: 500,
-        title: 'Deposit Option',
-        description: `Pay $500 now to secure your spot, then the remaining $${packagePrice - 500} before launch.`
-      },
-      {
-        id: 'full',
-        type: 'full',
-        amount: packagePrice,
-        title: 'Full Payment',
-        description: `Pay the full $${packagePrice} now for priority service and faster completion.`
-      }
-    ];
+  // Handle pricing tier selection
+  const handlePricingSelection = (tier: string) => {
+    // Add user selection as a message
+    addMessage({
+      id: uuidv4(),
+      text: `I'm interested in the ${tier} package`,
+      sender: 'user',
+      timestamp: new Date()
+    });
     
-    return (
-      <div className="bg-white rounded-lg p-3 mt-2 mb-4 shadow-sm">
-        {paymentOptions.map((option) => (
-          <div 
-            key={option.id}
-            className="mb-3 p-3 border border-gray-200 rounded-lg hover:border-blue-500 cursor-pointer transition-colors"
-            onClick={() => handlePaymentOptionSelect(option.type)}
-          >
-            <div className="font-bold text-gray-800">{option.title}</div>
-            <div className="text-sm text-gray-600 mb-2">{option.description}</div>
-            <div className="text-[#4a6cf7] font-semibold">
-              {option.type === 'deposit' ? `$${option.amount} now` : `$${option.amount} one-time payment`}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+    // Mark as qualified based on package selection and update budget
+    setQualificationData(prev => ({
+      ...prev,
+      qualified: true,
+      budget: tier
+    }));
+    
+    // Ask about budget flexibility
+    setTimeout(() => {
+      addMessage({
+        id: uuidv4(),
+        text: `Great choice! The ${tier} package is perfect for ${getPackageBenefit(tier)}. Do you have a specific budget or timeline constraint we should know about?`,
+        sender: 'bot',
+        timestamp: new Date(),
+        type: 'quickReplies',
+        quickReplies: [
+          "I'm flexible",
+          "Need to stay within budget",
+          "Need it fast",
+          "No constraints"
+        ]
+      });
+    }, 500);
+  };
+  
+  // Handle budget and timeline constraints
+  const handleConstraints = (constraint: string) => {
+    addMessage({
+      id: uuidv4(),
+      text: constraint,
+      sender: 'user',
+      timestamp: new Date()
+    });
+    
+    // Update budget flexibility information
+    const needsDeposit = constraint === "Need to stay within budget";
+    const needsExpedited = constraint === "Need it fast";
+    
+    setTimeout(() => {
+      if (needsDeposit) {
+        // Offer deposit option
+        addMessage({
+          id: uuidv4(),
+          text: "We understand budget constraints! We offer a 50% deposit option to start your project, with the remainder due upon completion. Would this payment structure work for you?",
+          sender: 'bot',
+          timestamp: new Date(),
+          type: 'quickReplies',
+          quickReplies: [
+            "Yes, that works",
+            "I'd prefer other options",
+            "Book a consultation"
+          ]
+        });
+      } else if (needsExpedited) {
+        // Offer expedited service
+        addMessage({
+          id: uuidv4(),
+          text: "For time-sensitive projects, we offer expedited service with a 15% rush fee. This can reduce delivery time by up to 40%. Would you like to learn more about this option?",
+          sender: 'bot',
+          timestamp: new Date(),
+          type: 'quickReplies',
+          quickReplies: [
+            "Yes, tell me more",
+            "No, standard timeline is fine",
+            "Book a consultation"
+          ]
+        });
+      } else {
+        // Standard flow for flexible clients
+        addMessage({
+          id: uuidv4(),
+          text: "Perfect! Would you like to schedule a consultation to discuss the details of your project and how we can customize this package for your specific needs?",
+          sender: 'bot',
+          timestamp: new Date(),
+          type: 'quickReplies',
+          quickReplies: [
+            "Book a consultation",
+            "Ask a question first"
+          ]
+        });
+      }
+    }, 500);
+  };
+  
+  // Get benefit based on package tier
+  const getPackageBenefit = (tier: string): string => {
+    switch (tier) {
+      case 'Basic':
+        return 'small businesses just establishing their online presence';
+      case 'Business':
+        return 'growing businesses looking to expand their digital footprint';
+      case 'Enterprise':
+        return 'established businesses with complex needs and custom requirements';
+      default:
+        return 'businesses ready to enhance their online presence';
+    }
   };
 
-  // Render CTA button
-  const renderCTA = (ctaLink: string, ctaText: string) => (
-    <a 
-      href={ctaLink}
-      className="inline-block bg-[#4a6cf7] hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-2 transition-colors duration-200"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      {ctaText}
-    </a>
-  );
+  // Collect email for follow-up
+  const collectEmail = () => {
+    setTimeout(() => {
+      addMessage({
+        id: uuidv4(),
+        text: "Please enter your email address so we can stay in touch:",
+        sender: 'bot',
+        timestamp: new Date(),
+        type: 'email'
+      });
+      
+      setShowEmailInput(true);
+    }, 500);
+  };
+  
+  // Collect phone for SMS/WhatsApp
+  const collectPhone = () => {
+    setTimeout(() => {
+      addMessage({
+        id: uuidv4(),
+        text: `Please enter your phone number for ${preferredChannel === 'whatsapp' ? 'WhatsApp' : 'SMS'} messages:`,
+        sender: 'bot',
+        timestamp: new Date(),
+        type: 'phone'
+      });
+      
+      setShowPhoneInput(true);
+    }, 500);
+  };
+
+  // Handle email submission
+  const handleEmailSubmission = (email: string) => {
+    setEmail(email);
+    setShowEmailInput(false);
+    
+    if (isValidEmail) {
+      setTimeout(() => {
+        addMessage({
+          id: uuidv4(),
+          text: `Thanks! We'll be in touch at ${email} with more information about our services.`,
+          sender: 'bot',
+          timestamp: new Date()
+        });
+        
+        // Send an immediate follow-up to their email
+        sendCrossPlatformMessage(`Hi from Kaizen Digital! Thanks for your interest in our services. Let me know if you have any questions!`);
+        
+        // Continue the conversation
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "In the meantime, would you like to see our pricing options or schedule a consultation?",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quickReplies',
+            quickReplies: ["Show me pricing", "Book a consultation"]
+          });
+        }, 1000);
+      }, 500);
+    } else {
+      setTimeout(() => {
+        addMessage({
+          id: uuidv4(),
+          text: "That doesn't look like a valid email address. Could you please try again?",
+          sender: 'bot',
+          timestamp: new Date(),
+          type: 'email'
+        });
+        
+        setShowEmailInput(true);
+      }, 500);
+    }
+  };
+  
+  // Handle phone submission
+  const handlePhoneSubmission = (phoneNumber: string) => {
+    setPhone(phoneNumber);
+    setShowPhoneInput(false);
+    
+    // Simple validation - at least 10 digits
+    const isValidPhone = /^\+?[0-9]{10,15}$/.test(phoneNumber.replace(/\s+/g, ''));
+    
+    if (isValidPhone) {
+      setTimeout(() => {
+        addMessage({
+          id: uuidv4(),
+          text: `Thanks! We'll be in touch at ${phoneNumber} with more information.`,
+          sender: 'bot',
+          timestamp: new Date()
+        });
+        
+        // Send an immediate follow-up message
+        sendCrossPlatformMessage(`Hi from Kaizen Digital! Thanks for your interest in our services. Let me know if you have any questions!`);
+        
+        // Continue the conversation
+        setTimeout(() => {
+          addMessage({
+            id: uuidv4(),
+            text: "In the meantime, would you like to see our pricing options or schedule a consultation?",
+            sender: 'bot',
+            timestamp: new Date(),
+            type: 'quickReplies',
+            quickReplies: ["Show me pricing", "Book a consultation"]
+          });
+        }, 1000);
+      }, 500);
+    } else {
+      setTimeout(() => {
+        addMessage({
+          id: uuidv4(),
+          text: "That doesn't look like a valid phone number. Please include country code and area code (e.g., +1 555 123 4567).",
+          sender: 'bot',
+          timestamp: new Date(),
+          type: 'phone'
+        });
+        
+        setShowPhoneInput(true);
+      }, 500);
+    }
+  };
+
+  // Collect contact info for follow-up
+  const collectContactInfo = () => {
+    setTimeout(() => {
+      addMessage({
+        id: uuidv4(),
+        text: "I'd be happy to connect you with our team. What's the best way to reach you?",
+        sender: 'bot',
+        timestamp: new Date(),
+        type: 'quickReplies',
+        quickReplies: ["Email", "WhatsApp", "SMS"]
+      });
+    }, 500);
+  };
+
+  // Add a message to the chat
+  const addMessage = (message: Message) => {
+    setMessages(prevMessages => [...prevMessages, message]);
+  };
 
   return (
-    <>
-      {/* Chat toggle button */}
-      {!isChatOpen && (
-        <button 
-          onClick={toggleChat}
-          className="fixed bottom-5 right-5 w-15 h-15 bg-[#4a6cf7] text-white rounded-full p-4 shadow-lg z-50 text-2xl flex items-center justify-center"
+    <div className="fixed bottom-4 right-4 z-50">
+      {/* Chat Button */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg flex items-center justify-center transition-all duration-300 transform hover:scale-105"
         >
-          💬
+          <FaComment className="text-xl" />
         </button>
       )}
 
-      {/* Chat container */}
-      {isChatOpen && (
-        <div className="fixed bottom-5 right-5 w-[350px] h-[500px] bg-white rounded-lg shadow-lg flex flex-col overflow-hidden z-50 font-sans">
-          <div className="p-4 bg-[#4a6cf7] text-white font-bold flex justify-between items-center">
-            <span>Chat with us</span>
-            <span onClick={toggleChat} className="cursor-pointer">✖</span>
+      {/* Chat Widget */}
+      {isOpen && (
+        <div className="bg-white rounded-lg shadow-xl flex flex-col w-80 sm:w-96 h-[500px] border border-gray-200">
+          {/* Header */}
+          <div className="bg-blue-600 text-white p-4 rounded-t-lg flex justify-between items-center">
+            <div>
+              <h3 className="font-semibold">Kaizen Digital</h3>
+              <p className="text-xs text-blue-100">Web Design & Development</p>
+            </div>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-white hover:text-blue-200 transition"
+            >
+              <FaTimes />
+            </button>
           </div>
-          
+
+          {/* Messages */}
           <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
-            {messages.map((message, index) => (
-              <div key={index}>
-                <div 
-                  className={`mb-2.5 p-2.5 rounded-[15px] max-w-[80%] break-words ${
-                    message.isUser 
-                      ? 'bg-[#e6f2ff] text-gray-800 ml-auto rounded-br-[4px]' 
-                      : 'bg-[#4a6cf7] text-white mr-auto rounded-bl-[4px]'
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`mb-4 ${
+                  message.sender === 'user' ? 'text-right' : 'text-left'
+                }`}
+              >
+                <div
+                  className={`inline-block rounded-lg p-3 max-w-[80%] ${
+                    message.sender === 'user'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-gray-800 border border-gray-200'
                   }`}
                 >
-                  {message.text}
+                  <p className="text-sm">{message.text}</p>
                 </div>
                 
-                {/* Render pricing if message type is pricing */}
-                {!message.isUser && message.type === 'pricing' && renderPricing()}
-                
-                {/* Render payment options if message type is payment-options */}
-                {!message.isUser && message.type === 'payment-options' && 
-                  message.packageType && message.packagePrice && 
-                  renderPaymentOptions(message.packageType, message.packagePrice)
-                }
-                
-                {/* Render CTA button if message type is cta */}
-                {!message.isUser && message.type === 'cta' && message.ctaLink && message.ctaText && 
-                  renderCTA(message.ctaLink, message.ctaText)
-                }
-                
-                {/* Render quick replies */}
-                {!message.isUser && message.quickReplies && message.quickReplies.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-3 mt-1">
-                    {message.quickReplies.map((reply, replyIndex) => (
+                {/* Quick Replies */}
+                {message.sender === 'bot' && message.type === 'quickReplies' && (
+                  <div className="mt-2 flex flex-wrap gap-2 justify-start">
+                    {message.quickReplies?.map((reply) => (
                       <button
-                        key={replyIndex}
+                        key={reply}
                         onClick={() => handleQuickReply(reply)}
-                        className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm transition-colors duration-200"
+                        className="bg-white text-blue-600 border border-blue-600 rounded-full px-3 py-1 text-sm font-medium hover:bg-blue-50 transition-colors"
                       >
                         {reply}
                       </button>
                     ))}
                   </div>
                 )}
+                
+                {/* Pricing Options */}
+                {message.sender === 'bot' && message.type === 'pricing' && (
+                  <div className="mt-2 grid gap-2">
+                    {message.pricing?.map((option) => (
+                      <div
+                        key={option.tier}
+                        className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="font-semibold text-blue-700">{option.tier}</h4>
+                          <span className="font-bold">{option.price}</span>
+                        </div>
+                        <ul className="text-xs text-gray-600 mb-2">
+                          {option.features.map((feature, i) => (
+                            <li key={i} className="mb-1">✓ {feature}</li>
+                          ))}
+                        </ul>
+                        <button
+                          onClick={() => handlePricingSelection(option.tier)}
+                          className="w-full bg-blue-600 text-white rounded-full px-3 py-1 text-sm font-medium hover:bg-blue-700 transition-colors"
+                        >
+                          {option.cta}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Email Input was shown */}
+                {message.sender === 'bot' && message.type === 'email' && (
+                  <div className="mt-2">
+                    <p className="text-xs text-gray-500 mb-1">
+                      <FaRegClock className="inline mr-1" />
+                      We respect your privacy and won't spam you
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
-            
-            {isTyping && (
-              <div className="flex p-2.5 mb-2.5 bg-[#4a6cf7] rounded-[15px] rounded-bl-[4px] mr-auto max-w-[80px]">
-                <span className="h-2.5 w-2.5 bg-white rounded-full mx-0.5 animate-bounce" style={{ animationDelay: '0s' }}></span>
-                <span className="h-2.5 w-2.5 bg-white rounded-full mx-0.5 animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                <span className="h-2.5 w-2.5 bg-white rounded-full mx-0.5 animate-bounce" style={{ animationDelay: '0.4s' }}></span>
-              </div>
-            )}
             <div ref={messagesEndRef} />
           </div>
-          
-          <div className="flex p-2.5 border-t border-[#e0e0e0]">
+
+          {/* Input */}
+          <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200">
             {showEmailInput ? (
-              <>
+              <div className="flex">
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Your email address..."
-                  className="flex-1 p-2.5 border border-[#ddd] rounded-l-[20px] outline-none"
+                  placeholder="Your email address"
+                  className="flex-1 border border-gray-300 rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <button 
-                  onClick={handleEmailSubmit}
-                  className="bg-[#4a6cf7] text-white border-none px-4 rounded-r-[20px] ml-0 cursor-pointer"
+                <button
+                  type="submit"
+                  className={`bg-blue-600 text-white rounded-r-lg p-2 ${
+                    isValidEmail ? 'hover:bg-blue-700' : 'opacity-50 cursor-not-allowed'
+                  }`}
+                  disabled={!isValidEmail}
                 >
                   Submit
                 </button>
-              </>
+              </div>
+            ) : showPhoneInput ? (
+              <div className="flex">
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+1 (555) 123-4567"
+                  className="flex-1 border border-gray-300 rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="submit"
+                  className="bg-blue-600 text-white rounded-r-lg p-2 hover:bg-blue-700"
+                >
+                  Submit
+                </button>
+              </div>
             ) : (
-              <>
+              <div className="flex">
                 <input
                   type="text"
-                  value={messageInput}
-                  onChange={(e) => setMessageInput(e.target.value)}
-                  onKeyPress={handleKeyPress}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
                   placeholder="Type your message..."
-                  className="flex-1 p-2.5 border border-[#ddd] rounded-[20px] outline-none"
+                  className="flex-1 border border-gray-300 rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <button 
-                  onClick={() => sendMessage()}
-                  className="bg-[#4a6cf7] text-white border-none w-10 h-10 rounded-full ml-2.5 cursor-pointer flex justify-center items-center"
+                <button
+                  type="submit"
+                  className="bg-blue-600 text-white rounded-r-lg p-2 hover:bg-blue-700"
+                  disabled={inputValue.trim() === ''}
                 >
-                  ➤
+                  <FaRegPaperPlane />
                 </button>
-              </>
+              </div>
             )}
-          </div>
+          </form>
         </div>
       )}
-    </>
+    </div>
   );
 };
 

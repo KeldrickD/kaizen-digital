@@ -6,8 +6,8 @@ import PricingCalculator from './PricingCalculator'
 import { toast } from 'react-hot-toast'
 
 // Initialize Stripe
-const stripePromise = process.env.STRIPE_PUBLIC_KEY 
-  ? loadStripe(process.env.STRIPE_PUBLIC_KEY) 
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) 
   : null
 
 const pricingTiers = [
@@ -51,6 +51,8 @@ const PricingSection = () => {
     try {
       // Set loading state
       setProcessingTier(priceId + (paymentType === 'deposit' ? '-deposit' : ''));
+      
+      console.log('Sending checkout request:', { priceId, paymentType });
       
       // Call the backend to create a checkout session
       const response = await fetch('/api/create-checkout-session', {
@@ -149,38 +151,23 @@ const PricingSection = () => {
           ))}
         </div>
         
-        <div className="flex flex-col items-center mt-14">
-          <p className="mb-4 text-xl text-gray-300">Need something more customized?</p>
-          
-          <button 
-            onClick={() => setShowCalculator(!showCalculator)}
-            className="text-white bg-gray-800 hover:bg-gray-700 px-6 py-3 rounded-lg flex items-center transition-colors mb-8"
-            disabled={!!processingTier}
-          >
-            {showCalculator ? 'Hide Calculator' : 'Use Our Price Calculator'}
-            <svg 
-              xmlns="http://www.w3.org/2000/svg" 
-              className={`h-5 w-5 ml-2 transition-transform transform ${showCalculator ? 'rotate-180' : ''}`} 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
+        {!showCalculator ? (
+          <div className="text-center mt-12">
+            <button 
+              onClick={() => setShowCalculator(true)}
+              className="btn-secondary"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          
-          {showCalculator && (
-            <div className="w-full transition-all duration-300 ease-in-out">
-              <PricingCalculator />
-            </div>
-          )}
-          
-          <div className="mt-6 text-center">
-            <p className="text-center mt-10 text-gray-400">
-              Have questions? <a href="https://calendly.com/kaizen-digital/free-consultation" className="text-kaizen-red hover:underline">Book a free consultation</a> or <a href="#contact" className="text-kaizen-red hover:underline">contact us</a>.
-            </p>
+              Need something custom? Use our price calculator
+            </button>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="mt-16 text-center">
+              <h3 className="text-2xl font-bold mb-8">Custom Website Calculator</h3>
+            </div>
+            <PricingCalculator />
+          </>
+        )}
       </div>
     </section>
   )

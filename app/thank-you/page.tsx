@@ -10,9 +10,10 @@ function ThankYouContent() {
   const sessionId = searchParams.get('session_id')
   const [countdown, setCountdown] = useState(5)
   const [isDeposit, setIsDeposit] = useState(false)
+  const [isRemainingBalance, setIsRemainingBalance] = useState(false)
   const [isLoadingPaymentInfo, setIsLoadingPaymentInfo] = useState(true)
   
-  // When the page loads, check if this was a deposit payment
+  // When the page loads, check if this was a deposit payment or remaining balance
   useEffect(() => {
     async function checkPaymentType() {
       if (!sessionId) {
@@ -26,6 +27,7 @@ function ThankYouContent() {
         if (response.ok) {
           const data = await response.json()
           setIsDeposit(data.paymentType === 'deposit')
+          setIsRemainingBalance(data.paymentType === 'remaining_balance')
         }
       } catch (error) {
         console.error('Error checking payment type:', error)
@@ -37,9 +39,9 @@ function ThankYouContent() {
     checkPaymentType()
   }, [sessionId])
   
-  // Set up redirect to Google Form
+  // Set up redirect to Google Form for new customers (not remaining balance payments)
   useEffect(() => {
-    if (!sessionId || isLoadingPaymentInfo) return
+    if (!sessionId || isLoadingPaymentInfo || isRemainingBalance) return
     
     const timer = setInterval(() => {
       setCountdown((prev) => {
@@ -54,7 +56,7 @@ function ThankYouContent() {
     }, 1000)
     
     return () => clearInterval(timer)
-  }, [sessionId, isLoadingPaymentInfo])
+  }, [sessionId, isLoadingPaymentInfo, isRemainingBalance])
   
   if (isLoadingPaymentInfo) {
     return (
@@ -80,9 +82,11 @@ function ThankYouContent() {
           <h1 className="text-3xl md:text-4xl font-bold mb-6">Payment Successful!</h1>
           
           <p className="text-xl mb-6">
-            {isDeposit 
-              ? "Thank you for your deposit payment! We're excited to start building your website." 
-              : "Thank you for your payment! We're excited to build your new website!"}
+            {isRemainingBalance
+              ? "Thank you for completing your payment! Your website project is now fully paid."
+              : isDeposit 
+                ? "Thank you for your deposit payment! We're excited to start building your website." 
+                : "Thank you for your payment! We're excited to build your new website!"}
           </p>
           
           {isDeposit && (
@@ -95,23 +99,50 @@ function ThankYouContent() {
             </div>
           )}
           
-          <div className="mb-8 p-4 bg-black rounded-lg">
-            <p className="mb-2">Next Steps:</p>
-            <p>
-              You'll be redirected to our client intake form in {countdown} seconds. 
-              Please provide us with the information we need to get started on your website.
-            </p>
-          </div>
+          {isRemainingBalance && (
+            <div className="mb-8 p-4 bg-black rounded-lg">
+              <h3 className="text-lg font-semibold mb-2 text-kaizen-red">Final Payment Complete</h3>
+              <p className="mb-2">
+                Thank you for completing your payment. Your website project is now fully paid.
+              </p>
+              <p>
+                We'll be in touch shortly with the final steps to launch your website.
+              </p>
+            </div>
+          )}
           
-          <p className="text-gray-400">
-            If you're not redirected automatically, 
-            <a 
-              href="https://forms.gle/KQGNwyWqHyVT9Bd16" 
-              className="text-kaizen-red hover:underline ml-1"
-            >
-              click here
-            </a>.
-          </p>
+          {!isRemainingBalance && (
+            <>
+              <div className="mb-8 p-4 bg-black rounded-lg">
+                <p className="mb-2">Next Steps:</p>
+                <p>
+                  You'll be redirected to our client intake form in {countdown} seconds. 
+                  Please provide us with the information we need to get started on your website.
+                </p>
+              </div>
+              
+              <p className="text-gray-400">
+                If you're not redirected automatically, 
+                <a 
+                  href="https://forms.gle/KQGNwyWqHyVT9Bd16" 
+                  className="text-kaizen-red hover:underline ml-1"
+                >
+                  click here
+                </a>.
+              </p>
+            </>
+          )}
+          
+          {isRemainingBalance && (
+            <div className="mt-8">
+              <a 
+                href="/" 
+                className="inline-block px-6 py-3 bg-kaizen-red text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Return to Home
+              </a>
+            </div>
+          )}
         </div>
       </div>
     </div>
