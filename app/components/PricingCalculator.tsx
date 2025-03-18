@@ -1,6 +1,12 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import { loadStripe } from '@stripe/stripe-js'
+
+// Initialize Stripe
+const stripePromise = process.env.STRIPE_PUBLIC_KEY 
+  ? loadStripe(process.env.STRIPE_PUBLIC_KEY) 
+  : null
 
 type CalculatorOption = {
   label: string;
@@ -36,6 +42,7 @@ const PricingCalculator = () => {
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [maintenance, setMaintenance] = useState<number>(0);
   const [totalPrice, setTotalPrice] = useState<number>(750);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
   
   // Calculate total price when options change
   useEffect(() => {
@@ -56,6 +63,63 @@ const PricingCalculator = () => {
       setSelectedFeatures(selectedFeatures.filter(label => label !== featureLabel));
     } else {
       setSelectedFeatures([...selectedFeatures, featureLabel]);
+    }
+  };
+
+  // Handle payment for custom package
+  const handleCustomPayment = async () => {
+    try {
+      setIsProcessing(true);
+      
+      // Create a custom package description
+      const packageDetails = {
+        pages: pageOptions.find(option => option.value === pages)?.label || `${pages} Pages`,
+        features: selectedFeatures,
+        maintenance: maintenanceOptions.find(option => option.value === maintenance)?.label || 'None',
+        totalPrice: totalPrice
+      };
+      
+      // Call the backend to create a checkout session
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          priceId: 'custom', 
+          amount: totalPrice * 100, // Stripe requires amount in cents
+          packageDetails 
+        }),
+      });
+      
+      const { id: sessionId, error } = await response.json();
+      
+      if (error) {
+        console.error('Error creating checkout session:', error);
+        alert('Something went wrong. Please try again later.');
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Redirect to Stripe Checkout
+      const stripe = await stripePromise;
+      if (!stripe) {
+        alert('Stripe failed to load. Please try again later.');
+        setIsProcessing(false);
+        return;
+      }
+      
+      const { error: redirectError } = await stripe.redirectToCheckout({
+        sessionId,
+      });
+      
+      if (redirectError) {
+        console.error('Error redirecting to checkout:', redirectError);
+        alert('Something went wrong. Please try again later.');
+        setIsProcessing(false);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      alert('Something went wrong. Please try again later.');
+      setIsProcessing(false);
     }
   };
 
@@ -122,7 +186,13 @@ const PricingCalculator = () => {
       </div>
       
       <div className="mt-6 text-center">
-        <button className="btn-primary">Get Started With This Package</button>
+        <button 
+          className="btn-primary"
+          onClick={handleCustomPayment}
+          disabled={isProcessing}
+        >
+          {isProcessing ? 'Processing...' : 'Get Started With This Package'}
+        </button>
         <p className="mt-4 text-sm text-gray-400">
           Like what you see? Contact us for a detailed quote or book a consultation below.
         </p>

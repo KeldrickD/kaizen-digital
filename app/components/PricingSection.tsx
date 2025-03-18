@@ -44,9 +44,13 @@ const pricingTiers = [
 
 const PricingSection = () => {
   const [showCalculator, setShowCalculator] = useState(false);
+  const [processingTier, setProcessingTier] = useState<string | null>(null);
   
   const handlePayment = async (priceId: string) => {
     try {
+      // Set loading state
+      setProcessingTier(priceId);
+      
       // Call the backend to create a checkout session
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
@@ -59,6 +63,7 @@ const PricingSection = () => {
       if (error) {
         console.error('Error creating checkout session:', error);
         alert('Something went wrong. Please try again later.');
+        setProcessingTier(null);
         return;
       }
       
@@ -66,6 +71,7 @@ const PricingSection = () => {
       const stripe = await stripePromise;
       if (!stripe) {
         alert('Stripe failed to load. Please try again later.');
+        setProcessingTier(null);
         return;
       }
       
@@ -76,10 +82,12 @@ const PricingSection = () => {
       if (redirectError) {
         console.error('Error redirecting to checkout:', redirectError);
         alert('Something went wrong. Please try again later.');
+        setProcessingTier(null);
       }
     } catch (err) {
       console.error('Error:', err);
       alert('Something went wrong. Please try again later.');
+      setProcessingTier(null);
     }
   }
 
@@ -105,8 +113,9 @@ const PricingSection = () => {
               <button 
                 onClick={() => handlePayment(tier.priceId)}
                 className="btn-primary w-full"
+                disabled={processingTier === tier.priceId}
               >
-                Get Your Website Now
+                {processingTier === tier.priceId ? 'Processing...' : 'Get Your Website Now'}
               </button>
             </div>
           ))}
@@ -118,6 +127,7 @@ const PricingSection = () => {
           <button 
             onClick={() => setShowCalculator(!showCalculator)}
             className="text-white bg-gray-800 hover:bg-gray-700 px-6 py-3 rounded-lg flex items-center transition-colors mb-8"
+            disabled={!!processingTier}
           >
             {showCalculator ? 'Hide Calculator' : 'Use Our Price Calculator'}
             <svg 
