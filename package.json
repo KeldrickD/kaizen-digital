@@ -28,6 +28,7 @@
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.21",
     "next": "^15.2.2",
+    "next-auth": "^4.24.11",
     "nodemailer": "^6.10.0",
     "postcss": "^8.5.3",
     "react": "^19.0.0",
