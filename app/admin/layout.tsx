@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -18,19 +18,10 @@ import { useSession } from 'next-auth/react';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const pathname = usePathname();
+// Component that uses session and navigation hooks
+function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  
-  const isActive = (path: string) => {
-    return pathname === path;
-  };
   
   // This is a backup for our middleware, just in case
   useEffect(() => {
@@ -63,6 +54,28 @@ export default function AdminLayout({
   
   // If not authenticated (should be caught by middleware, but just in case)
   return null;
+}
+
+// Loading fallback
+function AdminLoading() {
+  return (
+    <div className="min-h-screen bg-kaizen-black flex items-center justify-center">
+      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-kaizen-red border-r-transparent"></div>
+      <p className="ml-3 text-white">Loading admin panel...</p>
+    </div>
+  );
+}
+
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <Suspense fallback={<AdminLoading />}>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </Suspense>
+  );
 }
 
 function SidebarLink({ href, icon, text, active }: { 
