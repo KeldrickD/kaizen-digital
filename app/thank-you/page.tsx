@@ -23,7 +23,7 @@ function ThankYouContent() {
       
       try {
         // Call the backend to verify the session and get payment details
-        const response = await fetch(`/api/checkout-sessions/${sessionId}`)
+        const response = await fetch(`/api/checkout-info?sessionId=${sessionId}`)
         if (response.ok) {
           const data = await response.json()
           setIsDeposit(data.paymentType === 'deposit')
