@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google'
 import React from 'react'
 import ChatWidgetWrapper from './components/ChatWidgetWrapper'
 import SocialProofWrapper from './components/SocialProofWrapper'
+import { Toaster } from 'react-hot-toast'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -23,6 +24,23 @@ export default function RootLayout({
         {children}
         <ChatWidgetWrapper />
         <SocialProofWrapper />
+        <Toaster position="top-center" toastOptions={{
+          duration: 5000,
+          style: {
+            background: '#333',
+            color: '#fff',
+          },
+          success: {
+            style: {
+              background: '#22c55e',
+            },
+          },
+          error: {
+            style: {
+              background: '#ef4444',
+            },
+          },
+        }} />
       </body>
     </html>
   )

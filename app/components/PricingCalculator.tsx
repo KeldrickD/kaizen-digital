@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
+import { toast } from 'react-hot-toast'
 
 // Initialize Stripe
 const stripePromise = process.env.STRIPE_PUBLIC_KEY 
@@ -90,11 +91,16 @@ const PricingCalculator = () => {
         }),
       });
       
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create checkout session');
+      }
+      
       const { id: sessionId, error } = await response.json();
       
       if (error) {
         console.error('Error creating checkout session:', error);
-        alert('Something went wrong. Please try again later.');
+        toast.error('Something went wrong. Please try again later.');
         setIsProcessing(false);
         return;
       }
@@ -102,7 +108,7 @@ const PricingCalculator = () => {
       // Redirect to Stripe Checkout
       const stripe = await stripePromise;
       if (!stripe) {
-        alert('Stripe failed to load. Please try again later.');
+        toast.error('Payment system failed to load. Please try again later.');
         setIsProcessing(false);
         return;
       }
@@ -113,12 +119,12 @@ const PricingCalculator = () => {
       
       if (redirectError) {
         console.error('Error redirecting to checkout:', redirectError);
-        alert('Something went wrong. Please try again later.');
+        toast.error('Unable to redirect to checkout. Please try again later.');
         setIsProcessing(false);
       }
-    } catch (err) {
-      console.error('Error:', err);
-      alert('Something went wrong. Please try again later.');
+    } catch (err: any) {
+      console.error('Custom pricing error:', err);
+      toast.error(err.message || 'Something went wrong. Please try again later.');
       setIsProcessing(false);
     }
   };
