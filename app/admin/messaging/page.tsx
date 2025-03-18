@@ -33,7 +33,7 @@ export default function MessagingPage() {
   const [isComposingMessage, setIsComposingMessage] = useState(false);
   const [newMessage, setNewMessage] = useState({
     recipient: '',
-    channel: 'email' as const,
+    channel: 'email' as 'email' | 'whatsapp' | 'sms',
     message: '',
     sendAt: new Date(Date.now() + 3600000).toISOString().slice(0, 16) // Default to 1 hour from now
   });
@@ -134,7 +134,7 @@ export default function MessagingPage() {
     // Reset form
     setNewMessage({
       recipient: '',
-      channel: 'email',
+      channel: 'email' as 'email' | 'whatsapp' | 'sms',
       message: '',
       sendAt: new Date(Date.now() + 3600000).toISOString().slice(0, 16)
     });
