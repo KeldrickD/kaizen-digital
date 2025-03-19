@@ -1,223 +1,246 @@
 import { NextResponse } from 'next/server';
-import Stripe from 'stripe';
 import { headers } from 'next/headers';
+import Stripe from 'stripe';
+import { prisma } from '@/lib/prisma';
 
-// Initialize Stripe with your secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+// Initialize Stripe
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
 });
 
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+// This is your Stripe webhook secret for testing your endpoint locally.
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 export async function POST(request: Request) {
   const body = await request.text();
-  const headersList = await headers();
+  const headersList = headers();
   const sig = headersList.get('stripe-signature');
 
-  let event;
+  if (!sig || !webhookSecret) {
+    return NextResponse.json({ error: 'Missing signature or webhook secret' }, { status: 400 });
+  }
+
+  let event: Stripe.Event;
 
   try {
-    if (!sig || !endpointSecret) {
-      console.warn('Webhook signature or endpoint secret missing');
-      return NextResponse.json({ error: 'Webhook signature verification failed' }, { status: 400 });
-    }
-
-    event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err: any) {
     console.error(`Webhook Error: ${err.message}`);
     return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 });
   }
 
+  // Handle the event
   try {
-    // Handle the event
+    console.log(`Processing webhook event: ${event.type}`);
+    
     switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        
-        // Get customer details
-        const customerEmail = session.customer_details?.email || '';
-        const customerName = session.customer_details?.name || '';
-        
-        // Get payment metadata
-        const paymentType = session.metadata?.paymentType || 'full';
-        const packageType = session.metadata?.packageType || '';
-        const totalAmount = session.metadata?.totalAmount || '0';
-        const remainingAmount = session.metadata?.remainingAmount || '0';
-        const packageName = session.metadata?.packageName || '';
-        const packageDescription = session.metadata?.packageDescription || '';
-        const amountTotal = session.amount_total || 0;
-        
-        // If this is a deposit payment, create a new payment record
-        if (paymentType === 'deposit') {
-          try {
-            const response = await fetch(new URL('/api/payments/store', request.url).toString(), {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                id: session.id,
-                customerEmail,
-                customerName,
-                amount: parseInt(amountTotal.toString()) || 0,
-                remainingAmount: parseInt(remainingAmount) || 0,
-                paymentType: 'deposit',
-                packageType,
-                status: 'paid',
-                description: `${packageName} (Deposit): ${packageDescription}`,
-                metadata: {
-                  packageName,
-                  packageDescription,
-                  totalAmount
-                },
-              }),
-            });
-            
-            if (!response.ok) {
-              const errorText = await response.text();
-              console.error('Failed to create payment record:', errorText);
-            } else {
-              console.log('Successfully created payment record for deposit');
-              
-              // Send email notification to customer
-              try {
-                await fetch(new URL('/api/email/send-payment-notification', request.url).toString(), {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    templateType: 'deposit_confirmation',
-                    customerEmail,
-                    customerName,
-                    amount: parseInt(amountTotal.toString()) || 0,
-                    remainingAmount: parseInt(remainingAmount) || 0,
-                    packageType: packageName || packageType,
-                  }),
-                });
-                
-                // Send admin notification
-                await fetch(new URL('/api/email/send-payment-notification', request.url).toString(), {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    templateType: 'admin_notification',
-                    customerEmail,
-                    customerName,
-                    amount: parseInt(amountTotal.toString()) || 0,
-                    remainingAmount: parseInt(remainingAmount) || 0,
-                    packageType: packageName || packageType,
-                  }),
-                });
-              } catch (emailError) {
-                console.error('Error sending email notification:', emailError);
-              }
-            }
-          } catch (error) {
-            console.error('Error storing payment data:', error);
-          }
-        } else {
-          // For full payments, create a new completed payment record
-          try {
-            const response = await fetch(new URL('/api/payments/store', request.url).toString(), {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                id: session.id,
-                amount: parseInt(totalAmount) || parseInt(amountTotal.toString()) || 0,
-                remainingAmount: 0,
-                paymentType: 'full',
-                packageType,
-                status: 'completed',
-                customerEmail,
-                customerName,
-                description: `${packageName}: ${packageDescription}`,
-                metadata: {
-                  packageName,
-                  packageDescription,
-                },
-              }),
-            });
-            
-            if (!response.ok) {
-              const errorText = await response.text();
-              console.error('Failed to create payment record:', errorText);
-            } else {
-              console.log('Successfully created payment record for full payment');
-              
-              // Send email notification to customer
-              try {
-                await fetch(new URL('/api/email/send-payment-notification', request.url).toString(), {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    templateType: 'payment_complete',
-                    customerEmail,
-                    customerName,
-                    amount: parseInt(amountTotal.toString()) || 0,
-                    remainingAmount: 0,
-                    packageType: packageName || packageType,
-                  }),
-                });
-                
-                // Send admin notification
-                await fetch(new URL('/api/email/send-payment-notification', request.url).toString(), {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    templateType: 'admin_notification',
-                    customerEmail,
-                    customerName,
-                    amount: parseInt(amountTotal.toString()) || 0,
-                    remainingAmount: 0,
-                    packageType: packageName || packageType,
-                  }),
-                });
-              } catch (emailError) {
-                console.error('Error sending email notification:', emailError);
-              }
-            }
-          } catch (error) {
-            console.error('Error storing payment data:', error);
-          }
-        }
-        
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated':
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
         break;
-      }
-      
-      case 'payment_intent.succeeded': {
-        // Handle successful payment intents if needed
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        console.log(`PaymentIntent succeeded: ${paymentIntent.id}`);
+        
+      case 'customer.subscription.deleted':
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
         break;
-      }
-      
-      case 'payment_link.created': {
-        const paymentLink = event.data.object as Stripe.PaymentLink;
-        console.log(`Payment link created: ${paymentLink.url}`);
+        
+      case 'invoice.paid':
+        await handleInvoicePaid(event.data.object as Stripe.Invoice);
         break;
-      }
-      
-      // Add more event handlers as needed
-      
+        
+      case 'invoice.payment_failed':
+        await handleInvoicePaymentFailed(event.data.object as Stripe.Invoice);
+        break;
+        
       default:
         console.log(`Unhandled event type: ${event.type}`);
     }
 
     return NextResponse.json({ received: true });
-  } catch (err: any) {
-    console.error(`Error processing webhook: ${err.message}`);
-    return NextResponse.json(
-      { error: `Error processing webhook: ${err.message}` },
-      { status: 500 }
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    return NextResponse.json({ error: 'Error processing webhook' }, { status: 500 });
+  }
+}
+
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  try {
+    // Find the customer by Stripe customer ID
+    const customer = await prisma.customer.findFirst({
+      where: { stripeCustomerId: subscription.customer as string },
+    });
+
+    if (!customer) {
+      console.error(`Customer not found for Stripe customer ID: ${subscription.customer}`);
+      return;
+    }
+
+    // Get the price details
+    const price = await stripe.prices.retrieve(
+      subscription.items.data[0].price.id
     );
+    
+    // Get the product details
+    const product = await stripe.products.retrieve(price.product as string);
+
+    // Check if a subscription record already exists
+    const existingSubscription = await prisma.subscription.findFirst({
+      where: { stripeSubscriptionId: subscription.id },
+    });
+
+    if (existingSubscription) {
+      // Update the existing subscription
+      await prisma.subscription.update({
+        where: { id: existingSubscription.id },
+        data: {
+          status: subscription.status,
+          planName: product.name,
+          planPrice: price.unit_amount || 0,
+          currentPeriodStart: new Date(subscription.current_period_start * 1000),
+          currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        },
+      });
+    } else {
+      // Create a new subscription record
+      await prisma.subscription.create({
+        data: {
+          customerId: customer.id,
+          stripeSubscriptionId: subscription.id,
+          status: subscription.status,
+          planName: product.name,
+          planPrice: price.unit_amount || 0,
+          currentPeriodStart: new Date(subscription.current_period_start * 1000),
+          currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error handling subscription update:', error);
+    throw error;
+  }
+}
+
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  try {
+    // Find the subscription in our database
+    const existingSubscription = await prisma.subscription.findFirst({
+      where: { stripeSubscriptionId: subscription.id },
+    });
+
+    if (existingSubscription) {
+      // Update the status to canceled
+      await prisma.subscription.update({
+        where: { id: existingSubscription.id },
+        data: {
+          status: 'canceled',
+          cancelAtPeriodEnd: false,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error handling subscription deletion:', error);
+    throw error;
+  }
+}
+
+async function handleInvoicePaid(invoice: Stripe.Invoice) {
+  try {
+    // Only process subscription invoices
+    if (!invoice.subscription) return;
+
+    // Find the customer by Stripe customer ID
+    const customer = await prisma.customer.findFirst({
+      where: { stripeCustomerId: invoice.customer as string },
+    });
+
+    if (!customer) {
+      console.error(`Customer not found for Stripe customer ID: ${invoice.customer}`);
+      return;
+    }
+
+    // Check if we already have this invoice recorded
+    const existingInvoice = await prisma.invoice.findFirst({
+      where: { stripeInvoiceId: invoice.id },
+    });
+
+    if (existingInvoice) {
+      // Update the existing invoice
+      await prisma.invoice.update({
+        where: { id: existingInvoice.id },
+        data: {
+          status: invoice.status,
+          amount: invoice.amount_paid,
+          invoicePdf: invoice.invoice_pdf,
+        },
+      });
+    } else {
+      // Create a new invoice record
+      await prisma.invoice.create({
+        data: {
+          customerId: customer.id,
+          stripeInvoiceId: invoice.id,
+          invoiceNumber: invoice.number,
+          amount: invoice.amount_paid,
+          status: invoice.status,
+          invoicePdf: invoice.invoice_pdf,
+          invoiceDate: new Date(invoice.created * 1000),
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error handling invoice payment:', error);
+    throw error;
+  }
+}
+
+async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  try {
+    // Find the customer by Stripe customer ID
+    const customer = await prisma.customer.findFirst({
+      where: { stripeCustomerId: invoice.customer as string },
+    });
+
+    if (!customer) {
+      console.error(`Customer not found for Stripe customer ID: ${invoice.customer}`);
+      return;
+    }
+
+    // Check if we already have this invoice recorded
+    const existingInvoice = await prisma.invoice.findFirst({
+      where: { stripeInvoiceId: invoice.id },
+    });
+
+    if (existingInvoice) {
+      // Update the existing invoice
+      await prisma.invoice.update({
+        where: { id: existingInvoice.id },
+        data: {
+          status: invoice.status,
+        },
+      });
+    } else {
+      // Create a new invoice record
+      await prisma.invoice.create({
+        data: {
+          customerId: customer.id,
+          stripeInvoiceId: invoice.id,
+          invoiceNumber: invoice.number,
+          amount: invoice.amount_due,
+          status: invoice.status,
+          invoicePdf: invoice.invoice_pdf,
+          invoiceDate: new Date(invoice.created * 1000),
+        },
+      });
+    }
+
+    // If there's a subscription, update its status
+    if (invoice.subscription) {
+      const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+      await handleSubscriptionUpdated(subscription);
+    }
+  } catch (error) {
+    console.error('Error handling invoice payment failure:', error);
+    throw error;
   }
 } 

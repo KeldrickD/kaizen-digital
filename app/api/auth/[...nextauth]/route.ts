@@ -1,5 +1,8 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 
 // This is a simple auth configuration - in a real application, you'd store these
 // credentials securely, ideally in a database with encrypted passwords
@@ -7,6 +10,12 @@ const adminCredentials = {
   username: process.env.ADMIN_USERNAME || 'admin',
   password: process.env.ADMIN_PASSWORD || 'kaizen2024!'
 };
+
+// Define schema for customer login credentials
+const customerLoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+});
 
 const handler = NextAuth({
   providers: [
@@ -35,10 +44,43 @@ const handler = NextAuth({
         // Invalid credentials
         return null;
       }
+    }),
+    CredentialsProvider({
+      id: 'customer-login',
+      name: 'Customer Login',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' }
+      },
+      async authorize(credentials) {
+        try {
+          const { email, password } = customerLoginSchema.parse(credentials);
+          
+          const customer = await prisma.customer.findUnique({
+            where: { email },
+          });
+          
+          if (!customer) return null;
+          
+          const passwordValid = await bcrypt.compare(password, customer.passwordHash);
+          
+          if (!passwordValid) return null;
+          
+          return {
+            id: customer.id,
+            email: customer.email,
+            name: customer.name,
+            role: 'customer',
+          };
+        } catch (error) {
+          console.error('Auth error:', error);
+          return null;
+        }
+      }
     })
   ],
   pages: {
-    signIn: '/auth/signin',
+    signIn: '/auth/customer-login',
     signOut: '/auth/signout',
     error: '/auth/error',
   },
@@ -46,12 +88,14 @@ const handler = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.role = user.role;
+        token.id = user.id;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.role = token.role;
+        session.user.role = token.role as string;
+        session.user.id = token.id as string;
       }
       return session;
     }
@@ -60,6 +104,7 @@ const handler = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  secret: process.env.NEXTAUTH_SECRET,
 });
 
 export { handler as GET, handler as POST }; 
