@@ -2,18 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaCheckCircle, FaSpinner } from 'react-icons/fa';
+import { FaCheckCircle, FaSpinner, FaClipboardList } from 'react-icons/fa';
 import Link from 'next/link';
 
 export default function SubscriptionSuccessPage() {
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(10);
   const router = useRouter();
+  // Replace this with your actual Google Form URL
+  const googleFormUrl = "https://forms.gle/UZ9dJCaGH9YAVdtN9";
 
   useEffect(() => {
-    // Redirect to dashboard after countdown
+    // Redirect to Google Form after countdown
     const timer = setTimeout(() => {
-      router.push('/auth/customer-login?callbackUrl=/dashboard');
-    }, 5000);
+      window.location.href = googleFormUrl;
+    }, 10000);
 
     // Update countdown every second
     const interval = setInterval(() => {
@@ -24,7 +26,7 @@ export default function SubscriptionSuccessPage() {
       clearTimeout(timer);
       clearInterval(interval);
     };
-  }, [router]);
+  }, [googleFormUrl]);
 
   return (
     <div className="min-h-screen bg-kaizen-black flex items-center justify-center">
@@ -34,29 +36,32 @@ export default function SubscriptionSuccessPage() {
         </div>
         <h1 className="text-2xl font-bold mb-4">Subscription Successful!</h1>
         <p className="text-gray-300 mb-6">
-          Thank you for subscribing to our services. Your account has been created and we've sent your login details to your email.
+          Thank you for subscribing to our services! Your payment has been processed successfully.
         </p>
         
         <div className="mb-6 p-4 bg-gray-800 rounded-lg">
-          <p className="text-sm text-gray-400 mb-1">To access your dashboard:</p>
+          <p className="text-sm text-gray-400 mb-1 font-semibold">Next Steps:</p>
           <ol className="text-left text-sm text-gray-300 list-decimal pl-5">
-            <li className="mb-1">Check your email for login credentials</li>
-            <li className="mb-1">Login to your account with the provided details</li>
-            <li>Access your subscription dashboard</li>
+            <li className="mb-1">Complete our website information form</li>
+            <li className="mb-1">Receive your login credentials via email</li>
+            <li>Access your dashboard with the provided details</li>
           </ol>
         </div>
         
         <div className="flex flex-col gap-3">
-          <Link 
-            href="/auth/customer-login?callbackUrl=/dashboard" 
-            className="w-full py-3 px-4 bg-kaizen-red hover:bg-red-700 rounded-lg font-medium transition-colors text-center"
+          <a 
+            href={googleFormUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3 px-4 bg-kaizen-red hover:bg-red-700 rounded-lg font-medium transition-colors text-center flex items-center justify-center"
           >
-            Login to Dashboard
-          </Link>
+            <FaClipboardList className="mr-2" />
+            Complete Website Information Form
+          </a>
           
           <div className="text-sm text-gray-400 flex items-center justify-center">
             <FaSpinner className="animate-spin mr-2" />
-            Redirecting in {countdown} seconds...
+            Redirecting to form in {countdown} seconds...
           </div>
         </div>
       </div>
