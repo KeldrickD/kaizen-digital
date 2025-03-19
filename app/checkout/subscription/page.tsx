@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FaArrowLeft, FaSpinner, FaCheck } from 'react-icons/fa';
 import { getPlanById } from '@/app/data/subscriptionPlans';
 import Link from 'next/link';
 
-export default function SubscriptionCheckoutPage() {
+// Create a client component that uses useSearchParams
+function SubscriptionCheckout() {
   const searchParams = useSearchParams();
   const planId = searchParams.get('plan');
   const plan = planId ? getPlanById(planId) : null;
@@ -228,5 +229,26 @@ export default function SubscriptionCheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Loading fallback component
+function CheckoutLoading() {
+  return (
+    <div className="min-h-screen bg-kaizen-black flex items-center justify-center">
+      <div className="flex flex-col items-center">
+        <FaSpinner className="animate-spin text-4xl mb-4 text-kaizen-red" />
+        <p className="text-gray-300">Loading checkout information...</p>
+      </div>
+    </div>
+  );
+}
+
+// Main page component with Suspense
+export default function SubscriptionCheckoutPage() {
+  return (
+    <Suspense fallback={<CheckoutLoading />}>
+      <SubscriptionCheckout />
+    </Suspense>
   );
 } 
