@@ -27,7 +27,8 @@ export const maintenancePlans: SubscriptionPlan[] = [
       'Email support'
     ],
     color: 'blue',
-    category: 'maintenance'
+    category: 'maintenance',
+    stripePriceId: process.env.STRIPE_BASIC_PRICE_ID
   },
   {
     id: 'growth-monthly',
@@ -46,7 +47,8 @@ export const maintenancePlans: SubscriptionPlan[] = [
     ],
     popular: true,
     color: 'red',
-    category: 'maintenance'
+    category: 'maintenance',
+    stripePriceId: process.env.STRIPE_GROWTH_PRICE_ID
   },
   {
     id: 'elite-monthly',
@@ -65,7 +67,8 @@ export const maintenancePlans: SubscriptionPlan[] = [
       'Unlimited content updates'
     ],
     color: 'purple',
-    category: 'maintenance'
+    category: 'maintenance',
+    stripePriceId: process.env.STRIPE_ELITE_PRICE_ID
   }
 ];
 
@@ -86,7 +89,8 @@ export const seoPlans: SubscriptionPlan[] = [
       'Meta description optimization'
     ],
     color: 'green',
-    category: 'seo'
+    category: 'seo',
+    stripePriceId: process.env.STRIPE_SEO_STARTER_PRICE_ID
   },
   {
     id: 'seo-growth-monthly',
@@ -105,7 +109,8 @@ export const seoPlans: SubscriptionPlan[] = [
     ],
     popular: true,
     color: 'orange',
-    category: 'seo'
+    category: 'seo',
+    stripePriceId: process.env.STRIPE_SEO_GROWTH_PRICE_ID
   },
   {
     id: 'seo-scale-monthly',
@@ -124,7 +129,8 @@ export const seoPlans: SubscriptionPlan[] = [
       'Custom reporting dashboard'
     ],
     color: 'teal',
-    category: 'seo'
+    category: 'seo',
+    stripePriceId: process.env.STRIPE_SEO_SCALE_PRICE_ID
   }
 ];
 
@@ -146,7 +152,8 @@ export const adPlans: SubscriptionPlan[] = [
       'Up to $1,500 ad spend management'
     ],
     color: 'blue',
-    category: 'ads'
+    category: 'ads',
+    stripePriceId: process.env.STRIPE_ADS_STARTER_PRICE_ID
   },
   {
     id: 'ads-growth-monthly',
@@ -166,7 +173,8 @@ export const adPlans: SubscriptionPlan[] = [
     ],
     popular: true,
     color: 'purple',
-    category: 'ads'
+    category: 'ads',
+    stripePriceId: process.env.STRIPE_ADS_GROWTH_PRICE_ID
   },
   {
     id: 'ads-elite-monthly',
@@ -187,7 +195,8 @@ export const adPlans: SubscriptionPlan[] = [
       'Unlimited ad spend management'
     ],
     color: 'indigo',
-    category: 'ads'
+    category: 'ads',
+    stripePriceId: process.env.STRIPE_ADS_ELITE_PRICE_ID
   }
 ];
 
