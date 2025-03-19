@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
-import bcrypt from 'bcrypt';
+import bcryptjs from 'bcryptjs';
 
 // Configure email transporter
 const transporter = nodemailer.createTransport({
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     const password = crypto.randomBytes(8).toString('hex');
     
     // Hash the password for storage
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcryptjs.hash(password, 10);
     
     // Update the customer with the form information and credentials
     await prisma.customer.update({
