@@ -275,6 +275,8 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     const stripeCustomerId = session.customer as string;
     const customerEmail = session.customer_email;
     
+    console.log(`Checkout completed for email: ${customerEmail}, stripe ID: ${stripeCustomerId}`);
+    
     // Find or create a customer
     let customer = await prisma.customer.findFirst({
       where: { stripeCustomerId },
@@ -306,6 +308,19 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         });
         
         console.log(`Created new customer: ${customer.id} for email: ${customerEmail}`);
+        
+        // Always send credentials for new customers
+        try {
+          await sendCredentialsEmail({
+            to: customerEmail,
+            name: nameFromSession,
+            password,
+            subscriptionType: 'Website Service',
+          });
+          console.log(`Sent credentials email to new customer ${customerEmail}`);
+        } catch (emailError) {
+          console.error('Error sending credentials to new customer:', emailError);
+        }
       } else {
         // Update existing customer with Stripe ID
         customer = await prisma.customer.update({
@@ -318,28 +333,35 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       }
     }
     
-    // Generate a password if the customer doesn't have login credentials yet
-    if (!customer.passwordHash || customer.passwordHash === '') {
-      const password = crypto.randomBytes(8).toString('hex');
-      const hashedPassword = await bcryptjs.hash(password, 10);
-      
+    // ALWAYS generate a new password and send credentials after payment
+    // This ensures customers get their login details immediately
+    const password = crypto.randomBytes(8).toString('hex');
+    const hashedPassword = await bcryptjs.hash(password, 10);
+    
+    try {
       await prisma.customer.update({
         where: { id: customer.id },
         data: { passwordHash: hashedPassword }
       });
       
-      // Send login credentials via email
-      try {
-        await sendCredentialsEmail({
-          to: customerEmail,
-          name: customer.name,
-          password,
-          subscriptionType: customer.subscriptions?.[0]?.planName || 'Website Service',
-        });
-        console.log(`Sent credentials email to ${customerEmail} after checkout`);
-      } catch (emailError) {
-        console.error('Error sending credentials email:', emailError);
-      }
+      console.log(`Updated password for customer ${customer.id}`);
+    } catch (dbError) {
+      console.error('Error updating customer password:', dbError);
+    }
+    
+    // Send login credentials via email - always attempt this for all customers
+    try {
+      await sendCredentialsEmail({
+        to: customerEmail,
+        name: customer.name,
+        password,
+        subscriptionType: customer.subscriptions?.[0]?.planName || 'Website Service',
+      });
+      console.log(`Sent credentials email to ${customerEmail} after checkout`);
+    } catch (emailError) {
+      console.error('Error sending credentials email:', emailError);
+      // Log detailed error information
+      console.error('Email error details:', JSON.stringify(emailError));
     }
     
     // If subscription was purchased, it will be handled by the subscription.created event
