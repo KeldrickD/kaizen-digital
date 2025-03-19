@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "npx prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -44,5 +44,8 @@
     "typescript": "^5.8.2",
     "uuid": "^11.1.0",
     "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "prisma": "^6.5.0"
   }
 }
