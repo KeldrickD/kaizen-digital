@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     const subscriptions = await stripe.subscriptions.list({
       customer: stripeCustomerId,
       status: 'all',
-      expand: ['data.default_payment_method', 'data.plan.product'],
+      expand: ['data.default_payment_method', 'data.items.data.price.product'],
     });
     
     if (subscriptions.data.length === 0) {
@@ -41,6 +41,10 @@ export async function GET(request: Request) {
     
     // Get the most recent subscription
     const subscription = subscriptions.data[0];
+    
+    // Get the first subscription item (most subscriptions have just one item)
+    const firstItem = subscription.items.data[0];
+    const price = firstItem?.price;
     
     // Format the subscription data
     const planId = subscription.metadata.planId || '';
@@ -54,8 +58,8 @@ export async function GET(request: Request) {
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
       planId: planId,
       planName: plan?.name || subscription.metadata.planName || 'Unknown Plan',
-      price: subscription.plan?.amount ? subscription.plan.amount / 100 : 0,
-      interval: subscription.plan?.interval || 'month',
+      price: price?.unit_amount ? price.unit_amount / 100 : 0,
+      interval: price?.recurring?.interval || 'month',
       paymentMethod: subscription.default_payment_method 
         ? {
             brand: (subscription.default_payment_method as any).card?.brand || 'unknown',
