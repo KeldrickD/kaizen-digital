@@ -135,14 +135,15 @@ export const adPlans: SubscriptionPlan[] = [
     name: 'Starter Ad Management',
     price: 300,
     interval: 'month',
-    description: 'Basic Facebook & Instagram ad management to attract new customers.',
+    description: 'Basic Facebook & Instagram ad management to start attracting leads.',
     features: [
       'Facebook & Instagram ad setup',
+      'One ad campaign active at a time',
       'Basic audience targeting',
-      'One ad campaign',
-      'Monthly performance reporting',
-      'Regular ad monitoring',
-      'Campaign optimization'
+      'Monthly performance reports',
+      'Ad creative review',
+      'Weekly monitoring & optimization',
+      'Up to $1,500 ad spend management'
     ],
     color: 'blue',
     category: 'ads'
@@ -152,15 +153,16 @@ export const adPlans: SubscriptionPlan[] = [
     name: 'Growth Ad Management',
     price: 600,
     interval: 'month',
-    description: 'Advanced social media advertising to scale your customer acquisition.',
+    description: 'Advanced ad strategies to scale your customer acquisition.',
     features: [
       'Everything in Starter plan',
+      'Up to 3 ad campaigns active',
       'Advanced audience targeting',
-      'Multiple ad campaigns',
       'A/B testing of ad creative',
-      'Custom audience creation',
-      'Bi-weekly performance reports',
-      'Strategic campaign planning'
+      'Custom landing page recommendations',
+      'Bi-weekly optimization',
+      'Competitor ad analysis',
+      'Up to $5,000 ad spend management'
     ],
     popular: true,
     color: 'purple',
@@ -171,16 +173,18 @@ export const adPlans: SubscriptionPlan[] = [
     name: 'Elite Ad Management',
     price: 1000,
     interval: 'month',
-    description: 'Comprehensive social advertising and lead nurturing strategy.',
+    description: 'Comprehensive ad strategy with full-funnel marketing approach.',
     features: [
       'Everything in Growth plan',
-      'Full-funnel ad strategy',
+      '5+ ad campaigns active',
+      'Custom audience creation',
       'Retargeting campaigns',
-      'Advanced conversion tracking',
-      'Email follow-up sequences',
-      'Custom landing pages',
-      'Weekly optimization & reporting',
-      'Campaign ROI analysis'
+      'Email marketing integration',
+      'Full-funnel strategy',
+      'Custom dashboard reporting',
+      'Lead nurturing strategy',
+      'Weekly strategy optimization',
+      'Unlimited ad spend management'
     ],
     color: 'indigo',
     category: 'ads'

@@ -19,7 +19,7 @@ export default function AdManagementPage() {
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h1 className="text-4xl md:text-5xl font-bold mb-6">Facebook & Instagram Ad Management</h1>
             <p className="text-xl text-gray-300 mb-8">
-              Drive consistent leads and sales with expertly managed social media advertising campaigns
+              Need more customers? We manage your social media ads for consistent leads & sales
             </p>
             
             {/* Annually/Monthly toggle - for future use */}
@@ -56,23 +56,23 @@ export default function AdManagementPage() {
                   <FaFacebook className="text-xl" />
                 </div>
                 <h3 className="text-xl font-semibold mb-3">Expert Targeting</h3>
-                <p className="text-gray-400">Reach your ideal customers with precision audience targeting</p>
+                <p className="text-gray-400">Reach the exact customers who are most likely to buy from you</p>
               </div>
               
               <div className="bg-gray-900 p-6 rounded-xl text-center">
                 <div className="bg-purple-100 text-purple-600 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
                   <FaInstagram className="text-xl" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Optimized Campaigns</h3>
-                <p className="text-gray-400">Get better results with continuous optimization and A/B testing</p>
+                <h3 className="text-xl font-semibold mb-3">Compelling Creative</h3>
+                <p className="text-gray-400">Ads that stop the scroll and drive action from your audience</p>
               </div>
               
               <div className="bg-gray-900 p-6 rounded-xl text-center">
                 <div className="bg-indigo-100 text-indigo-600 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4">
                   <FaChartLine className="text-xl" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">Measurable ROI</h3>
-                <p className="text-gray-400">Track performance with detailed analytics and reporting</p>
+                <h3 className="text-xl font-semibold mb-3">Measurable Results</h3>
+                <p className="text-gray-400">Clear reporting on leads, sales, and return on ad spend</p>
               </div>
             </div>
           </div>
@@ -139,21 +139,21 @@ export default function AdManagementPage() {
             ))}
           </div>
           
-          {/* Case Study / Success Story */}
-          <div className="mt-16 bg-gradient-to-r from-blue-500 to-purple-600 p-8 rounded-xl max-w-3xl mx-auto">
+          {/* Success Story */}
+          <div className="mt-16 bg-gradient-to-r from-blue-500 to-indigo-600 p-8 rounded-xl max-w-3xl mx-auto">
             <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold mb-4">Success Story</h3>
-              <p className="text-white mb-4">
-                "With Kaizen's ad management, we increased our lead generation by 347% while reducing our cost per lead by 42%. The ROI has been incredible for our business."
+              <h3 className="text-2xl font-bold mb-4">Client Success Story</h3>
+              <p className="text-white mb-4 italic">
+                "Within just 3 months of working with Kaizen Digital, our Facebook ads generated 47 qualified leads and 12 new clients, with a 387% return on ad spend. Their team handles everything while we focus on serving our customers."
               </p>
-              <p className="font-semibold">— Sarah Johnson, Owner of Urban Fitness</p>
+              <p className="text-white font-semibold">- Sarah Johnson, Owner of Riverside Wellness Center</p>
             </div>
-            <div className="flex justify-center">
+            <div className="text-center">
               <Link 
                 href="/contact" 
-                className="inline-block py-3 px-6 bg-white text-purple-600 hover:bg-gray-100 rounded-lg font-medium transition-colors"
+                className="inline-block py-3 px-6 bg-white text-indigo-600 hover:bg-gray-100 rounded-lg font-medium transition-colors"
               >
-                Start Your Success Story
+                Book a Free Ad Strategy Call
               </Link>
             </div>
           </div>
@@ -164,30 +164,30 @@ export default function AdManagementPage() {
             
             <div className="space-y-6">
               <div className="bg-gray-900 rounded-lg p-6">
-                <h3 className="text-xl font-semibold mb-3">Do I need to provide the ad creative?</h3>
+                <h3 className="text-xl font-semibold mb-3">Do I need to pay for the ads separately?</h3>
                 <p className="text-gray-300">
-                  We can work with your existing creative or develop new ad designs for you. Our team includes graphic designers who can create compelling visuals that drive engagement and conversions.
+                  Yes, our fees cover the management, strategy, and optimization of your ads. The actual ad spend goes directly to Facebook/Instagram and is separate from our management fee. We'll help you determine the right budget based on your goals.
                 </p>
               </div>
               
               <div className="bg-gray-900 rounded-lg p-6">
-                <h3 className="text-xl font-semibold mb-3">What's your approach to ad targeting?</h3>
+                <h3 className="text-xl font-semibold mb-3">How soon will I see results?</h3>
                 <p className="text-gray-300">
-                  We start with your ideal customer profile and use Facebook's powerful targeting options to reach them. We continuously refine these audiences based on performance data to ensure your ads reach the most receptive users.
+                  Most clients begin seeing results within the first month. We typically need 2-4 weeks to test audiences and optimize campaigns. Long-term results improve as we gather more data and refine the strategy.
                 </p>
               </div>
               
               <div className="bg-gray-900 rounded-lg p-6">
-                <h3 className="text-xl font-semibold mb-3">Is the ad spend included in your fees?</h3>
+                <h3 className="text-xl font-semibold mb-3">What do you need from me to get started?</h3>
                 <p className="text-gray-300">
-                  No, our management fees are separate from your ad spend. You'll pay Facebook/Meta directly for your advertising budget. We recommend a minimum ad spend of $500/month to see meaningful results, but this can be adjusted based on your goals.
+                  We'll need access to your Facebook Business Manager, basic information about your target audience, and your business goals. We'll also discuss your unique selling points and competitive advantages to craft compelling ad copy.
                 </p>
               </div>
               
               <div className="bg-gray-900 rounded-lg p-6">
-                <h3 className="text-xl font-semibold mb-3">How do you report on ad performance?</h3>
+                <h3 className="text-xl font-semibold mb-3">Do you create the ad graphics and copy?</h3>
                 <p className="text-gray-300">
-                  You'll receive detailed performance reports showing key metrics like impressions, clicks, conversions, cost per click, and return on ad spend. Our higher-tier plans include more frequent reporting and in-depth analytics.
+                  Yes! Our team handles the entire process, including creating eye-catching graphics and persuasive ad copy. We'll work with you to ensure all content aligns with your brand voice and marketing objectives.
                 </p>
               </div>
             </div>
