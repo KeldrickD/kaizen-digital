@@ -6,11 +6,11 @@ import bcryptjs from 'bcryptjs';
 
 // Configure email transporter
 const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.EMAIL_PORT || '587'),
-  secure: process.env.EMAIL_SECURE === 'true',
+  host: process.env.EMAIL_HOST || 'mail.privateemail.com',
+  port: parseInt(process.env.EMAIL_PORT || '465'),
+  secure: process.env.EMAIL_SECURE === 'true' || true,
   auth: {
-    user: process.env.EMAIL_USER,
+    user: process.env.EMAIL_USER || 'admin@kaizendigital.design',
     pass: process.env.EMAIL_PASS,
   },
 });
@@ -20,6 +20,7 @@ export async function POST(request: Request) {
   try {
     // Parse the incoming data from the Google Form
     const formData = await request.json();
+    console.log('Received form data:', formData);
     
     // Expected form fields
     // Note: Adjust these field names to match your actual Google Form field names
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
     } = formData;
     
     if (!email) {
+      console.error('Missing required field: email');
       return NextResponse.json({ 
         error: 'Missing required field: email' 
       }, { status: 400 });
@@ -45,8 +47,11 @@ export async function POST(request: Request) {
       where: { email },
       include: { subscriptions: true }
     });
+    
+    console.log('Found customer:', existingCustomer ? existingCustomer.id : 'None');
 
     if (!existingCustomer) {
+      console.error(`No customer found with email: ${email}`);
       return NextResponse.json({ 
         error: 'No matching customer found for this email. Please contact support.' 
       }, { status: 404 });
@@ -54,40 +59,62 @@ export async function POST(request: Request) {
 
     // Generate a random password
     const password = crypto.randomBytes(8).toString('hex');
+    console.log(`Generated password for ${email}: ${password}`);
     
     // Hash the password for storage
     const hashedPassword = await bcryptjs.hash(password, 10);
     
-    // Update the customer with the form information and credentials
-    await prisma.customer.update({
-      where: { id: existingCustomer.id },
-      data: {
-        name: name || existingCustomer.name,
-        passwordHash: hashedPassword,
-        companyName: companyName || '',
-        phone: phone || '',
-        websiteUrl: websiteUrl || '',
-        websiteGoals: websiteGoals || '',
-        designPreferences: designPreferences || '',
-        formSubmitted: true,
-        formSubmittedAt: new Date(),
-      }
-    });
+    try {
+      // Update the customer with the form information and credentials
+      const updatedCustomer = await prisma.customer.update({
+        where: { id: existingCustomer.id },
+        data: {
+          name: name || existingCustomer.name,
+          passwordHash: hashedPassword,
+          companyName: companyName || '',
+          phone: phone || '',
+          websiteUrl: websiteUrl || '',
+          websiteGoals: websiteGoals || '',
+          designPreferences: designPreferences || '',
+          formSubmitted: true,
+          formSubmittedAt: new Date(),
+        }
+      });
+      
+      console.log('Updated customer:', updatedCustomer.id);
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      return NextResponse.json({ 
+        error: 'Failed to update customer record'
+      }, { status: 500 });
+    }
 
     // Send the login credentials via email
-    await sendCredentialsEmail({
-      to: email,
-      name: name || email,
-      password,
-      subscriptionType: existingCustomer.subscriptions?.[0]?.planName || 'Website Maintenance',
-    });
+    try {
+      await sendCredentialsEmail({
+        to: email,
+        name: name || email,
+        password,
+        subscriptionType: existingCustomer.subscriptions?.[0]?.planName || 'Website Maintenance',
+      });
+      console.log('Credentials email sent to:', email);
+    } catch (error) {
+      console.error('Error sending credentials email:', error);
+      // Continue execution even if email fails
+    }
 
     // Send notification to admin
-    await sendAdminNotificationEmail({
-      customerEmail: email,
-      customerName: name || email,
-      formData,
-    });
+    try {
+      await sendAdminNotificationEmail({
+        customerEmail: email,
+        customerName: name || email,
+        formData,
+      });
+      console.log('Admin notification email sent');
+    } catch (error) {
+      console.error('Error sending admin email:', error);
+      // Continue execution even if email fails
+    }
 
     return NextResponse.json({
       success: true,
@@ -112,7 +139,7 @@ async function sendCredentialsEmail({ to, name, password, subscriptionType }: {
   const loginUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://kaizendigitaldesign.com'}/auth/customer-login?callbackUrl=/dashboard`;
 
   const mailOptions = {
-    from: `"Kaizen Digital" <${process.env.EMAIL_FROM || 'noreply@kaizendigitaldesign.com'}>`,
+    from: `"Kaizen Digital" <${process.env.EMAIL_FROM || 'admin@kaizendigital.design'}>`,
     to,
     subject: `Your Kaizen Digital Dashboard Access`,
     html: `
@@ -143,6 +170,17 @@ async function sendCredentialsEmail({ to, name, password, subscriptionType }: {
     `,
   };
 
+  // Log email attempt
+  console.log('Attempting to send email to:', to);
+  console.log('Email configuration:', {
+    host: process.env.EMAIL_HOST || 'mail.privateemail.com',
+    port: parseInt(process.env.EMAIL_PORT || '465'),
+    secure: process.env.EMAIL_SECURE === 'true' || true,
+    auth: {
+      user: process.env.EMAIL_USER || 'admin@kaizendigital.design',
+    }
+  });
+
   // Only attempt to send if we have email credentials
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.log('Email sending skipped - no credentials provided');
@@ -150,8 +188,14 @@ async function sendCredentialsEmail({ to, name, password, subscriptionType }: {
     return;
   }
 
-  const info = await transporter.sendMail(mailOptions);
-  return info;
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent:', info.messageId);
+    return info;
+  } catch (error) {
+    console.error('Error sending email:', error);
+    throw error;
+  }
 }
 
 // Function to notify admin about the form submission
@@ -160,7 +204,7 @@ async function sendAdminNotificationEmail({ customerEmail, customerName, formDat
   customerName: string;
   formData: any;
 }) {
-  const adminEmail = process.env.ADMIN_EMAIL || 'support@kaizendigitaldesign.com';
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@kaizendigital.design';
 
   // Format form data for admin email
   const formDataHtml = Object.entries(formData)
@@ -168,7 +212,7 @@ async function sendAdminNotificationEmail({ customerEmail, customerName, formDat
     .join('');
 
   const mailOptions = {
-    from: `"Kaizen Digital" <${process.env.EMAIL_FROM || 'noreply@kaizendigitaldesign.com'}>`,
+    from: `"Kaizen Digital" <${process.env.EMAIL_FROM || 'admin@kaizendigital.design'}>`,
     to: adminEmail,
     subject: `New Form Submission: ${customerName}`,
     html: `
@@ -198,6 +242,11 @@ async function sendAdminNotificationEmail({ customerEmail, customerName, formDat
     return;
   }
 
-  const info = await transporter.sendMail(mailOptions);
-  return info;
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    return info;
+  } catch (error) {
+    console.error('Error sending admin email:', error);
+    throw error;
+  }
 } 

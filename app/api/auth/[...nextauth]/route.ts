@@ -71,6 +71,7 @@ const handler = NextAuth({
             email: customer.email,
             name: customer.name,
             role: 'customer',
+            stripeCustomerId: customer.stripeCustomerId
           };
         } catch (error) {
           console.error('Auth error:', error);
@@ -89,6 +90,9 @@ const handler = NextAuth({
       if (user) {
         token.role = user.role;
         token.id = user.id;
+        if (user.stripeCustomerId) {
+          token.stripeCustomerId = user.stripeCustomerId;
+        }
       }
       return token;
     },
@@ -96,6 +100,9 @@ const handler = NextAuth({
       if (session.user) {
         session.user.role = token.role as string;
         session.user.id = token.id as string;
+        if (token.stripeCustomerId) {
+          session.user.stripeCustomerId = token.stripeCustomerId as string;
+        }
       }
       return session;
     }
