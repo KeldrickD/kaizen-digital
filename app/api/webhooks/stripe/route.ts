@@ -169,7 +169,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
       await prisma.invoice.update({
         where: { id: existingInvoice.id },
         data: {
-          status: invoice.status,
+          status: invoice.status || 'unknown',
           amount: invoice.amount_paid,
           invoicePdf: invoice.invoice_pdf,
         },
@@ -182,7 +182,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
           stripeInvoiceId: invoice.id,
           invoiceNumber: invoice.number,
           amount: invoice.amount_paid,
-          status: invoice.status,
+          status: invoice.status || 'unknown',
           invoicePdf: invoice.invoice_pdf,
           invoiceDate: new Date(invoice.created * 1000),
         },
@@ -216,7 +216,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
       await prisma.invoice.update({
         where: { id: existingInvoice.id },
         data: {
-          status: invoice.status,
+          status: invoice.status || 'payment_failed',
         },
       });
     } else {
@@ -227,7 +227,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
           stripeInvoiceId: invoice.id,
           invoiceNumber: invoice.number,
           amount: invoice.amount_due,
-          status: invoice.status,
+          status: invoice.status || 'payment_failed',
           invoicePdf: invoice.invoice_pdf,
           invoiceDate: new Date(invoice.created * 1000),
         },

@@ -79,7 +79,7 @@ export async function GET(request: Request) {
     const formattedInvoices = invoices.data.map(invoice => ({
       id: invoice.id,
       amount: invoice.amount_paid / 100,
-      status: invoice.status,
+      status: invoice.status || 'unknown',
       date: new Date(invoice.created * 1000).toISOString(),
       pdfUrl: invoice.invoice_pdf,
       number: invoice.number,
