@@ -62,8 +62,8 @@ export async function POST(request: Request) {
         companyName: companyName || '',
         website: website || '',
       },
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/maintenance`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/webhook-success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/maintenance`,
     });
 
     return NextResponse.json({ url: session.url });
