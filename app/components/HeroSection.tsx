@@ -20,7 +20,7 @@ const HeroSection = () => {
               Get Your Website in 48 Hours
             </Link>
             <a 
-              href="https://calendly.com/kaizen-digital/free-consultation" 
+              href="https://calendly.com/kaizendigitaldesign/30min" 
               target="_blank" 
               rel="noopener noreferrer"
               className="btn-secondary text-lg flex items-center justify-center"

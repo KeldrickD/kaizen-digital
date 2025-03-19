@@ -721,7 +721,7 @@ const ChatWidget = () => {
     setTimeout(() => {
       addMessage({
         id: uuidv4(),
-        text: "Great choice! Let's set up a free 10-minute consultation to discuss your project. You can schedule a time that works for you using the link below:",
+        text: "Great choice! Let's set up a free 30-minute consultation to discuss your project. You can schedule a time that works for you using the link below:",
         sender: 'bot',
         timestamp: new Date()
       });
@@ -729,7 +729,7 @@ const ChatWidget = () => {
       setTimeout(() => {
         addMessage({
           id: uuidv4(),
-          text: "https://calendly.com/kaizen-digital/free-consultation",
+          text: "https://calendly.com/kaizendigitaldesign/30min",
           sender: 'bot',
           timestamp: new Date()
         });
