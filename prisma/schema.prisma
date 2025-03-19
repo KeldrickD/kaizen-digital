@@ -11,15 +11,22 @@ datasource db {
 }
 
 model Customer {
-  id               String    @id @default(uuid())
-  name             String
-  email            String    @unique
-  passwordHash     String
-  stripeCustomerId String?   @unique
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  subscriptions    Subscription[]
-  invoices         Invoice[]
+  id                 String        @id @default(uuid())
+  name               String
+  email              String        @unique
+  passwordHash       String
+  stripeCustomerId   String?       @unique
+  companyName        String?
+  phone              String?
+  websiteUrl         String?
+  websiteGoals       String?
+  designPreferences  String?
+  formSubmitted      Boolean       @default(false)
+  formSubmittedAt    DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  subscriptions      Subscription[]
+  invoices           Invoice[]
 }
 
 model Subscription {
