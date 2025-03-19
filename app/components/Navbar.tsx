@@ -47,6 +47,7 @@ export default function Navbar() {
             <NavLink href="/services">Services</NavLink>
             <NavLink href="/maintenance">Maintenance</NavLink>
             <NavLink href="/seo-services">SEO Services</NavLink>
+            <NavLink href="/ad-management">Ad Management</NavLink>
             <NavLink href="/portfolio">Portfolio</NavLink>
             <NavLink href="/about">About</NavLink>
             <NavLink href="/contact">Contact</NavLink>
@@ -71,6 +72,7 @@ export default function Navbar() {
           <MobileNavLink href="/services" onClick={() => setIsMenuOpen(false)}>Services</MobileNavLink>
           <MobileNavLink href="/maintenance" onClick={() => setIsMenuOpen(false)}>Maintenance</MobileNavLink>
           <MobileNavLink href="/seo-services" onClick={() => setIsMenuOpen(false)}>SEO Services</MobileNavLink>
+          <MobileNavLink href="/ad-management" onClick={() => setIsMenuOpen(false)}>Ad Management</MobileNavLink>
           <MobileNavLink href="/portfolio" onClick={() => setIsMenuOpen(false)}>Portfolio</MobileNavLink>
           <MobileNavLink href="/about" onClick={() => setIsMenuOpen(false)}>About</MobileNavLink>
           <MobileNavLink href="/contact" onClick={() => setIsMenuOpen(false)}>Contact</MobileNavLink>

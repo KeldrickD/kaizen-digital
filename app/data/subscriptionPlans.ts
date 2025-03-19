@@ -8,7 +8,7 @@ export interface SubscriptionPlan {
   popular?: boolean;
   stripePriceId?: string; // We'll add real Stripe price IDs later
   color?: string;
-  category?: 'maintenance' | 'seo'; // Add category to distinguish between plan types
+  category?: 'maintenance' | 'seo' | 'ads'; // Add ads category
 }
 
 export const maintenancePlans: SubscriptionPlan[] = [
@@ -128,12 +128,73 @@ export const seoPlans: SubscriptionPlan[] = [
   }
 ];
 
+// Add Facebook Ad Management plans
+export const adPlans: SubscriptionPlan[] = [
+  {
+    id: 'ads-starter-monthly',
+    name: 'Starter Ad Management',
+    price: 300,
+    interval: 'month',
+    description: 'Basic Facebook & Instagram ad management to attract new customers.',
+    features: [
+      'Facebook & Instagram ad setup',
+      'Basic audience targeting',
+      'One ad campaign',
+      'Monthly performance reporting',
+      'Regular ad monitoring',
+      'Campaign optimization'
+    ],
+    color: 'blue',
+    category: 'ads'
+  },
+  {
+    id: 'ads-growth-monthly',
+    name: 'Growth Ad Management',
+    price: 600,
+    interval: 'month',
+    description: 'Advanced social media advertising to scale your customer acquisition.',
+    features: [
+      'Everything in Starter plan',
+      'Advanced audience targeting',
+      'Multiple ad campaigns',
+      'A/B testing of ad creative',
+      'Custom audience creation',
+      'Bi-weekly performance reports',
+      'Strategic campaign planning'
+    ],
+    popular: true,
+    color: 'purple',
+    category: 'ads'
+  },
+  {
+    id: 'ads-elite-monthly',
+    name: 'Elite Ad Management',
+    price: 1000,
+    interval: 'month',
+    description: 'Comprehensive social advertising and lead nurturing strategy.',
+    features: [
+      'Everything in Growth plan',
+      'Full-funnel ad strategy',
+      'Retargeting campaigns',
+      'Advanced conversion tracking',
+      'Email follow-up sequences',
+      'Custom landing pages',
+      'Weekly optimization & reporting',
+      'Campaign ROI analysis'
+    ],
+    color: 'indigo',
+    category: 'ads'
+  }
+];
+
 // Function to get a specific plan by ID
 export function getPlanById(planId: string): SubscriptionPlan | undefined {
-  return [...maintenancePlans, ...seoPlans].find(plan => plan.id === planId);
+  return [...maintenancePlans, ...seoPlans, ...adPlans].find(plan => plan.id === planId);
 }
 
 // Function to get all plans by category
-export function getPlansByCategory(category: 'maintenance' | 'seo'): SubscriptionPlan[] {
-  return category === 'maintenance' ? maintenancePlans : seoPlans;
+export function getPlansByCategory(category: 'maintenance' | 'seo' | 'ads'): SubscriptionPlan[] {
+  if (category === 'maintenance') return maintenancePlans;
+  if (category === 'seo') return seoPlans;
+  return adPlans;
 } 

@@ -37,6 +37,7 @@ export default function Footer() {
               <FooterLink href="/services">Web Development</FooterLink>
               <FooterLink href="/maintenance">Website Maintenance</FooterLink>
               <FooterLink href="/seo-services">SEO & Content Marketing</FooterLink>
+              <FooterLink href="/ad-management">Facebook Ad Management</FooterLink>
               <FooterLink href="/services">E-Commerce</FooterLink>
             </ul>
           </div>
