@@ -42,7 +42,7 @@ export default function Navbar() {
           </div>
           
           {/* Desktop menu */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className="hidden md:flex items-center space-x-6">
             <NavLink href="/">Home</NavLink>
             <NavLink href="/services">Services</NavLink>
             <NavLink href="/maintenance">Maintenance</NavLink>
@@ -51,6 +51,20 @@ export default function Navbar() {
             <NavLink href="/portfolio">Portfolio</NavLink>
             <NavLink href="/about">About</NavLink>
             <NavLink href="/contact">Contact</NavLink>
+            
+            {/* Auth buttons */}
+            <Link 
+              href="/auth/customer-login" 
+              className="text-gray-300 hover:text-white font-medium transition-colors border border-gray-600 rounded-md px-3 py-1.5"
+            >
+              Login
+            </Link>
+            <Link 
+              href="/auth/register" 
+              className="bg-kaizen-red hover:bg-red-700 text-white font-medium rounded-md px-4 py-1.5 transition-colors"
+            >
+              Get Started
+            </Link>
           </div>
           
           {/* Mobile menu button */}
@@ -76,6 +90,24 @@ export default function Navbar() {
           <MobileNavLink href="/portfolio" onClick={() => setIsMenuOpen(false)}>Portfolio</MobileNavLink>
           <MobileNavLink href="/about" onClick={() => setIsMenuOpen(false)}>About</MobileNavLink>
           <MobileNavLink href="/contact" onClick={() => setIsMenuOpen(false)}>Contact</MobileNavLink>
+          
+          {/* Auth buttons for mobile */}
+          <div className="pt-2 mt-2 border-t border-gray-700 flex space-x-2">
+            <Link
+              href="/auth/customer-login"
+              onClick={() => setIsMenuOpen(false)}
+              className="flex-1 block text-center px-3 py-2 text-base font-medium text-gray-300 hover:text-white hover:bg-gray-800 rounded-md border border-gray-700"
+            >
+              Login
+            </Link>
+            <Link
+              href="/auth/register"
+              onClick={() => setIsMenuOpen(false)}
+              className="flex-1 block text-center px-3 py-2 text-base font-medium text-white bg-kaizen-red hover:bg-red-700 rounded-md"
+            >
+              Get Started
+            </Link>
+          </div>
         </div>
       </div>
     </nav>

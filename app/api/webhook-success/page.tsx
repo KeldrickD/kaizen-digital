@@ -2,68 +2,83 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaCheckCircle, FaSpinner, FaClipboardList } from 'react-icons/fa';
-import Link from 'next/link';
+import { BsCheckCircleFill } from 'react-icons/bs';
+import { FaClipboardList, FaUserPlus, FaSignInAlt } from 'react-icons/fa';
 
-export default function SubscriptionSuccessPage() {
-  const [countdown, setCountdown] = useState(10);
+export default function SuccessPage() {
   const router = useRouter();
-  // Replace this with your actual Google Form URL
-  const googleFormUrl = "https://forms.gle/UZ9dJCaGH9YAVdtN9";
+  const [countdown, setCountdown] = useState(10);
 
   useEffect(() => {
-    // Redirect to Google Form after countdown
-    const timer = setTimeout(() => {
-      window.location.href = googleFormUrl;
-    }, 10000);
-
-    // Update countdown every second
-    const interval = setInterval(() => {
-      setCountdown((prev) => prev - 1);
-    }, 1000);
-
-    return () => {
-      clearTimeout(timer);
-      clearInterval(interval);
-    };
-  }, [googleFormUrl]);
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      // Redirect to Google Form when countdown reaches 0
+      router.push("https://forms.gle/UZ9dJCaGH9YAVdtN9");
+    }
+  }, [countdown, router]);
 
   return (
-    <div className="min-h-screen bg-kaizen-black flex items-center justify-center">
-      <div className="bg-gray-900 p-8 rounded-xl shadow-lg max-w-md w-full text-center">
-        <div className="flex justify-center mb-6">
-          <FaCheckCircle className="text-green-500 text-6xl" />
-        </div>
-        <h1 className="text-2xl font-bold mb-4">Subscription Successful!</h1>
-        <p className="text-gray-300 mb-6">
-          Thank you for subscribing to our services! Your payment has been processed successfully.
-        </p>
-        
-        <div className="mb-6 p-4 bg-gray-800 rounded-lg">
-          <p className="text-sm text-gray-400 mb-1 font-semibold">Next Steps:</p>
-          <ol className="text-left text-sm text-gray-300 list-decimal pl-5">
-            <li className="mb-1">Complete our website information form</li>
-            <li className="mb-1">Receive your login credentials via email</li>
-            <li>Access your dashboard with the provided details</li>
-          </ol>
+    <div className="min-h-screen bg-kaizen-black flex flex-col items-center justify-center p-4">
+      <div className="bg-gray-900 p-6 rounded-xl shadow-2xl max-w-xl w-full mx-auto text-center">
+        <div className="text-green-500 flex justify-center mb-4">
+          <BsCheckCircleFill size={64} />
         </div>
         
-        <div className="flex flex-col gap-3">
-          <a 
-            href={googleFormUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-3 px-4 bg-kaizen-red hover:bg-red-700 rounded-lg font-medium transition-colors text-center flex items-center justify-center"
-          >
-            <FaClipboardList className="mr-2" />
-            Complete Website Information Form
-          </a>
+        <h1 className="text-3xl font-bold text-white mb-4">Payment Successful!</h1>
+        
+        <div className="border-t border-b border-gray-700 py-6 my-6">
+          <h2 className="text-xl font-bold text-white mb-4">Next Steps:</h2>
           
-          <div className="text-sm text-gray-400 flex items-center justify-center">
-            <FaSpinner className="animate-spin mr-2" />
-            Redirecting to form in {countdown} seconds...
+          <div className="space-y-6">
+            <div className="flex items-start text-left">
+              <div className="bg-gray-800 p-3 rounded-full mr-4">
+                <FaClipboardList className="text-kaizen-red" size={24} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white text-lg">1. Complete Website Information Form</h3>
+                <p className="text-gray-400 mt-1">
+                  You'll be redirected to our form in {countdown} seconds to provide details about your website needs.
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-start text-left">
+              <div className="bg-gray-800 p-3 rounded-full mr-4">
+                <FaUserPlus className="text-kaizen-red" size={24} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white text-lg">2. Create Your Account</h3>
+                <p className="text-gray-400 mt-1">
+                  Register for an account using the "Get Started" button in the navigation bar to access your dashboard.
+                </p>
+                <a href="/auth/register" className="mt-2 inline-block bg-kaizen-red hover:bg-red-700 text-white font-medium rounded-md px-4 py-2 transition-colors">
+                  Register Now
+                </a>
+              </div>
+            </div>
+            
+            <div className="flex items-start text-left">
+              <div className="bg-gray-800 p-3 rounded-full mr-4">
+                <FaSignInAlt className="text-kaizen-red" size={24} />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white text-lg">3. Access Your Dashboard</h3>
+                <p className="text-gray-400 mt-1">
+                  After creating your account, you can log in anytime to view your subscription details and invoices.
+                </p>
+                <a href="/auth/customer-login" className="mt-2 inline-block border border-gray-600 hover:border-white text-gray-300 hover:text-white font-medium rounded-md px-4 py-2 transition-colors">
+                  Login
+                </a>
+              </div>
+            </div>
           </div>
         </div>
+        
+        <p className="text-gray-400 italic">
+          Need help? Contact our support team at admin@kaizendigital.design
+        </p>
       </div>
     </div>
   );
