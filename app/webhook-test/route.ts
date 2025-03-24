@@ -48,13 +48,13 @@ export async function POST(request: Request) {
           message: 'Test webhook processed',
           emailSent: result
         });
-      } catch (emailError) {
+      } catch (emailError: unknown) {
         console.error('Error sending test email:', emailError);
         
         return NextResponse.json({
           success: false,
           message: 'Test webhook processed but email sending failed',
-          error: emailError.message
+          error: emailError instanceof Error ? emailError.message : 'Unknown error'
         }, { status: 500 });
       }
     }
@@ -64,13 +64,13 @@ export async function POST(request: Request) {
       message: 'Test webhook processed',
       note: 'No email was sent because no email address was provided'
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error processing test webhook:', error);
     
     return NextResponse.json({
       success: false,
       message: 'Error processing test webhook',
-      error: error.message
+      error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 } 

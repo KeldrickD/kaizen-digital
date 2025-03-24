@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ received: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error processing webhook:', error);
     return NextResponse.json({ error: 'Error processing webhook' }, { status: 500 });
   }
@@ -307,8 +307,11 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
             subscriptionType: 'Website Service',
           });
           console.log(`Sent credentials email to new customer ${customerEmail}`);
-        } catch (emailError) {
-          console.error('Error sending credentials to new customer:', emailError);
+        } catch (emailError: unknown) {
+          console.error('Error sending email:', emailError);
+          // Continue with the process even if email fails
+          // We don't want to prevent the customer from being created
+          // just because the email failed to send
         }
       } else {
         // Update existing customer with Stripe ID
@@ -334,8 +337,15 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       });
       
       console.log(`Updated password for customer ${customer.id}`);
-    } catch (dbError) {
-      console.error('Error updating customer password:', dbError);
+    } catch (dbError: unknown) {
+      console.error('Error saving customer to database:', dbError);
+      return new Response(
+        JSON.stringify({ 
+          error: dbError instanceof Error ? dbError.message : 'Database error',
+          success: false 
+        }),
+        { status: 500 }
+      );
     }
     
     // Send login credentials via email - always attempt this for all customers
@@ -347,16 +357,21 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
         subscriptionType: customer.subscriptions?.[0]?.planName || 'Website Service',
       });
       console.log(`Sent credentials email to ${customerEmail} after checkout`);
-    } catch (emailError) {
+    } catch (emailError: unknown) {
       console.error('Error sending credentials email:', emailError);
-      // Log detailed error information
-      console.error('Email error details:', JSON.stringify(emailError));
+      // Continue with the process even if email fails
     }
     
     // If subscription was purchased, it will be handled by the subscription.created event
     console.log('Checkout session processing completed for customer:', customer.id);
-  } catch (error) {
-    console.error('Error processing checkout session:', error);
-    throw error;
+  } catch (error: unknown) {
+    console.error('Error handling stripe webhook:', error);
+    return new Response(
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        success: false 
+      }),
+      { status: 500 }
+    );
   }
 } 
