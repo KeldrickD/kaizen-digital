@@ -6,12 +6,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
 });
 
-export async function GET(
-  request: Request,
-  { params }: { params: { priceId: string } }
-) {
+export async function GET(request: Request) {
   try {
-    const priceId = params.priceId;
+    // Get priceId from URL query parameters
+    const url = new URL(request.url);
+    const priceId = url.searchParams.get('priceId');
     
     if (!priceId) {
       return NextResponse.json(

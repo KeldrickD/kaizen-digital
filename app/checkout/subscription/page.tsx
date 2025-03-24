@@ -31,7 +31,7 @@ export default function CheckoutPage() {
     if (priceId) {
       const fetchProductDetails = async () => {
         try {
-          const response = await fetch(`/api/products/${priceId}`);
+          const response = await fetch(`/api/products?priceId=${priceId}`);
           if (!response.ok) {
             throw new Error('Product not found');
           }
