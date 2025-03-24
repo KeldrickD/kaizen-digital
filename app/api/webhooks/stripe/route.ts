@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
-import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import bcryptjs from 'bcryptjs';
+import { sendCredentialsEmail } from '@/lib/email';
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -13,17 +13,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 // This is your Stripe webhook secret for testing your endpoint locally.
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-// Configure email transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'mail.privateemail.com',
-  port: parseInt(process.env.EMAIL_PORT || '465'),
-  secure: process.env.EMAIL_SECURE === 'true' || true,
-  auth: {
-    user: process.env.EMAIL_USER || 'admin@kaizendigital.design',
-    pass: process.env.EMAIL_PASS,
-  },
-});
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -368,76 +357,6 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     console.log('Checkout session processing completed for customer:', customer.id);
   } catch (error) {
     console.error('Error processing checkout session:', error);
-    throw error;
-  }
-}
-
-// Function to send login credentials to the customer
-async function sendCredentialsEmail({ to, name, password, subscriptionType }: {
-  to: string;
-  name: string;
-  password: string;
-  subscriptionType: string;
-}) {
-  const loginUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://kaizendigitaldesign.com'}/auth/customer-login?callbackUrl=/dashboard`;
-  const googleFormUrl = "https://forms.gle/UZ9dJCaGH9YAVdtN9";
-
-  const mailOptions = {
-    from: `"Kaizen Digital" <${process.env.EMAIL_FROM || 'admin@kaizendigital.design'}>`,
-    to,
-    subject: `Your Kaizen Digital Account Created`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #000; padding: 20px; text-align: center;">
-          <h1 style="color: #e61919; margin: 0;">Kaizen Digital Design</h1>
-        </div>
-        <div style="padding: 20px; border: 1px solid #eee; background-color: #fff;">
-          <h2>Thank You for Your Purchase!</h2>
-          <p>Hello ${name},</p>
-          <p>Thank you for choosing Kaizen Digital Design. Your payment has been processed successfully.</p>
-          
-          <div style="margin: 20px 0; padding: 15px; background-color: #f7f7f7; border-left: 4px solid #e61919;">
-            <p style="margin-top: 0;"><strong>Next Step:</strong> Please complete our website information form to help us understand your needs:</p>
-            <div style="text-align: center; margin: 15px 0;">
-              <a href="${googleFormUrl}" style="background-color: #e61919; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold;">Complete Website Information Form</a>
-            </div>
-          </div>
-          
-          <p><strong>Here are your dashboard login credentials:</strong></p>
-          <div style="background-color: #f5f5f5; padding: 15px; border-radius: 4px; margin: 20px 0;">
-            <p style="margin: 5px 0;"><strong>Email:</strong> ${to}</p>
-            <p style="margin: 5px 0;"><strong>Password:</strong> ${password}</p>
-          </div>
-          <div style="margin: 25px 0; text-align: center;">
-            <a href="${loginUrl}" style="background-color: #3a86ff; color: white; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold;">Access Your Dashboard</a>
-          </div>
-          <p>Please keep this information secure. You can access your dashboard at any time to track your subscription and manage your account.</p>
-          <p>If you have any questions or need assistance, please don't hesitate to contact us.</p>
-          <p>Thank you for choosing Kaizen Digital Design!</p>
-        </div>
-        <div style="background-color: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #666;">
-          <p>© ${new Date().getFullYear()} Kaizen Digital Design. All rights reserved.</p>
-        </div>
-      </div>
-    `,
-  };
-
-  // Log email attempt
-  console.log('Attempting to send credentials email to:', to);
-
-  // Only attempt to send if we have email credentials
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.log('Email sending skipped - no credentials provided');
-    console.log('Would have sent credentials email to:', to);
-    return;
-  }
-
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Credentials email sent:', info.messageId);
-    return info;
-  } catch (error) {
-    console.error('Error sending credentials email:', error);
     throw error;
   }
 } 

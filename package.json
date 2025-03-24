@@ -19,6 +19,7 @@
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^6.5.0",
+    "@sendgrid/mail": "^8.1.4",
     "@stripe/react-stripe-js": "^3.4.0",
     "@stripe/stripe-js": "^6.0.0",
     "@types/bcryptjs": "^3.0.0",
@@ -29,6 +30,7 @@
     "@types/twilio": "^3.19.3",
     "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.21",
+    "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
     "next": "^15.2.2",
     "next-auth": "^4.24.11",
@@ -46,6 +48,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "prisma": "^6.5.0"
   }
 }

@@ -1,16 +1,5 @@
 import { NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
-
-// Configure email transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'mail.privateemail.com',
-  port: parseInt(process.env.EMAIL_PORT || '465'),
-  secure: process.env.EMAIL_SECURE === 'true' || true,
-  auth: {
-    user: process.env.EMAIL_USER || 'admin@kaizendigital.design',
-    pass: process.env.EMAIL_PASS,
-  },
-});
+import { sendEmail } from '@/lib/email';
 
 export async function POST(request: Request) {
   try {
@@ -25,6 +14,7 @@ export async function POST(request: Request) {
     console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set (value hidden)' : 'Not set');
     console.log('EMAIL_FROM:', process.env.EMAIL_FROM || 'Not set');
     console.log('ADMIN_EMAIL:', process.env.ADMIN_EMAIL || 'Not set');
+    console.log('SENDGRID_API_KEY:', process.env.SENDGRID_API_KEY ? 'Set (value hidden)' : 'Not set');
     
     const body = await request.json();
     console.log('Request body:', body);
@@ -35,8 +25,7 @@ export async function POST(request: Request) {
     // Try to send a test email
     console.log('Attempting to send test email to:', to);
     
-    const mailOptions = {
-      from: `"Kaizen Digital" <${process.env.EMAIL_FROM || 'admin@kaizendigital.design'}>`,
+    const success = await sendEmail({
       to,
       subject: 'Test Email from Kaizen Digital',
       html: `
@@ -46,30 +35,24 @@ export async function POST(request: Request) {
           <p>Timestamp: ${new Date().toISOString()}</p>
         </div>
       `,
-    };
+    });
     
-    try {
-      const info = await transporter.sendMail(mailOptions);
-      console.log('Test email sent:', info.messageId);
-      
+    if (success) {
       return NextResponse.json({
         success: true,
         message: 'Test email sent successfully',
-        messageId: info.messageId,
       });
-    } catch (emailError: any) {
-      console.error('Error sending test email:', emailError);
-      
+    } else {
       return NextResponse.json({
         success: false,
-        error: emailError.message,
-        details: emailError,
+        error: 'Failed to send email through any available method',
         config: {
           host: process.env.EMAIL_HOST || 'mail.privateemail.com',
           port: parseInt(process.env.EMAIL_PORT || '465'),
           secure: process.env.EMAIL_SECURE === 'true' || true,
           user: process.env.EMAIL_USER ? 'Set (value hidden)' : 'Not set',
           pass: process.env.EMAIL_PASS ? 'Set (value hidden)' : 'Not set',
+          sendgrid: process.env.SENDGRID_API_KEY ? 'Set (value hidden)' : 'Not set',
         },
       }, { status: 500 });
     }
