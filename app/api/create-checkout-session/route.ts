@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
-// Initialize Stripe with your secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+// Initialize Stripe
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
 });
 
@@ -38,148 +41,100 @@ const DEPOSIT_AMOUNT = 50000;
 
 export async function POST(request: Request) {
   try {
-    const { priceId, amount, packageDetails, paymentType = 'full' } = await request.json();
-    
-    console.log('Checkout request received:', { priceId, amount, paymentType });
-    
-    let session;
-    let packageName: string;
-    let packageDescription: string;
-    let totalAmount: number;
-    let paymentAmount: number;
-    let remainingAmount: number;
-    
-    // Handle custom pricing
-    if (priceId === 'custom') {
-      // Calculate the amount based on payment type
-      paymentAmount = paymentType === 'deposit' ? DEPOSIT_AMOUNT : amount;
-      remainingAmount = paymentType === 'deposit' ? amount - DEPOSIT_AMOUNT : 0;
-      totalAmount = amount;
-      packageName = 'Custom Website Package';
-      packageDescription = `${packageDetails.pages} with ${packageDetails.features.join(', ')}${
-        packageDetails.maintenance !== 'None' 
-          ? ` and ${packageDetails.maintenance} maintenance`
-          : ''
-      }`;
-      
-      // Create a session with custom price
-      session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: paymentType === 'deposit' 
-                  ? 'Deposit for Custom Website Package' 
-                  : 'Custom Website Package',
-                description: `${packageDescription}${paymentType === 'deposit' ? ' (Deposit payment)' : ''}`,
-              },
-              unit_amount: paymentAmount, // Amount in cents
-            },
-            quantity: 1,
-          } as any, // Cast to any to bypass TypeScript checking
-        ],
-        mode: 'payment',
-        success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}?canceled=true`,
-        metadata: {
-          packageType: 'custom',
-          packageName,
-          packageDescription,
-          pages: packageDetails.pages,
-          features: packageDetails.features.join(','),
-          maintenance: packageDetails.maintenance,
-          paymentType,
-          totalAmount: totalAmount.toString(),
-          remainingAmount: remainingAmount.toString(),
-        },
-      });
-    } else {
-      // Get package info based on priceId
-      let packageInfo = PACKAGE_INFO[priceId];
-      
-      // If the priceId is not found, default to starter package
-      if (!packageInfo) {
-        console.warn(`Invalid priceId provided: ${priceId}, defaulting to Starter`);
-        packageInfo = PACKAGE_INFO.price_starter;
-      }
-      
-      // Calculate the amount based on payment type
-      paymentAmount = paymentType === 'deposit' ? DEPOSIT_AMOUNT : packageInfo.amount;
-      remainingAmount = paymentType === 'deposit' ? packageInfo.amount - DEPOSIT_AMOUNT : 0;
-      totalAmount = packageInfo.amount;
-      packageName = packageInfo.name;
-      packageDescription = packageInfo.description;
-      
-      // Create a dynamic price for the standard package
-      session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: paymentType === 'deposit' 
-                  ? `Deposit for ${packageInfo.name}` 
-                  : packageInfo.name,
-                description: `${packageInfo.description}${paymentType === 'deposit' ? ' (Deposit payment)' : ''}`,
-              },
-              unit_amount: paymentAmount,
-            },
-            quantity: 1,
-          } as any, // Cast to any to bypass TypeScript checking
-        ],
-        mode: 'payment',
-        success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}?canceled=true`,
-        metadata: {
-          packageType: priceId,
-          packageName,
-          packageDescription,
-          paymentType,
-          totalAmount: totalAmount.toString(),
-          remainingAmount: remainingAmount.toString(),
-        },
-      });
+    // Get the session to check if user is authenticated
+    const session = await getServerSession(authOptions);
+
+    const { priceId, customerId, customerEmail } = await request.json();
+
+    if (!priceId) {
+      return NextResponse.json(
+        { error: 'Price ID is required' },
+        { status: 400 }
+      );
     }
+
+    // Get the price from Stripe
+    const price = await stripe.prices.retrieve(priceId);
     
-    // After creating the session, store the payment information
-    try {
-      // Only store payment information for deposit payments (we'll handle full payments on session completion)
-      if (paymentType === 'deposit') {
-        await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/payments/store`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            id: session.id,
-            amount: paymentAmount,
-            remainingAmount,
-            paymentType,
-            packageType: priceId,
-            status: 'pending', // Will be updated to 'paid' when webhook confirms payment
-            description: `${paymentType === 'deposit' ? 'Deposit for ' : ''}${packageName}: ${packageDescription}`,
-            customerEmail: '', // Will be updated after payment with webhook
-            metadata: {
-              packageName,
-              packageDescription,
-              totalAmount,
-            },
-          }),
+    if (!price) {
+      return NextResponse.json(
+        { error: 'Invalid price ID' },
+        { status: 400 }
+      );
+    }
+
+    // Get or create the customer in Stripe
+    let stripeCustomerId: string;
+    
+    // Use the user's information from the session if available
+    const email = customerEmail || session?.user?.email;
+    const userId = customerId || session?.user?.id;
+    
+    if (!email) {
+      return NextResponse.json(
+        { error: 'Customer email is required' },
+        { status: 400 }
+      );
+    }
+
+    // Check if the customer already exists in our database
+    const existingCustomer = userId
+      ? await prisma.customer.findUnique({
+          where: { id: userId },
+        })
+      : await prisma.customer.findFirst({
+          where: { email },
+        });
+
+    if (existingCustomer?.stripeCustomerId) {
+      // Use existing Stripe customer
+      stripeCustomerId = existingCustomer.stripeCustomerId;
+    } else {
+      // Create a new Stripe customer
+      const customer = await stripe.customers.create({
+        email,
+        name: existingCustomer?.name || 'New Customer',
+      });
+      
+      stripeCustomerId = customer.id;
+      
+      // Update our database with the Stripe customer ID if the user exists
+      if (existingCustomer) {
+        await prisma.customer.update({
+          where: { id: existingCustomer.id },
+          data: { stripeCustomerId },
         });
       }
-    } catch (storageError) {
-      console.error('Error storing payment info:', storageError);
-      // Continue even if storage fails - we'll rely on webhooks as backup
     }
+
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     
-    return NextResponse.json({ id: session.id });
-  } catch (err: any) {
-    console.error('Checkout session error:', err);
+    // Create the checkout session
+    const checkoutSession = await stripe.checkout.sessions.create({
+      customer: stripeCustomerId,
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      billing_address_collection: 'auto',
+      allow_promotion_codes: true,
+      success_url: `${baseUrl}/api/webhook-success`,
+      cancel_url: `${baseUrl}/pricing`,
+      metadata: {
+        userId: existingCustomer?.id || '',
+      },
+    });
+
+    return NextResponse.json({ id: checkoutSession.id });
+  } catch (error: any) {
+    console.error('Error creating checkout session:', error);
+    
     return NextResponse.json(
-      { error: err.message },
+      { error: error.message || 'Error creating checkout session' },
       { status: 500 }
     );
   }

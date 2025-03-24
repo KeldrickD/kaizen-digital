@@ -1,173 +1,147 @@
 "use client"
 
 import React, { useState } from 'react'
-import { loadStripe } from '@stripe/stripe-js'
-import PricingCalculator from './PricingCalculator'
-import { toast } from 'react-hot-toast'
+import { FaCheck, FaChevronRight } from 'react-icons/fa'
+import Link from 'next/link'
 
-// Initialize Stripe
-const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
-  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) 
-  : null
+interface PricingTier {
+  title: string;
+  price: number;
+  features: string[];
+  mostPopular: boolean;
+  productId: string;
+}
 
-const pricingTiers = [
+const pricingTiers: PricingTier[] = [
   {
-    name: 'Starter Site',
-    price: 750,
+    title: 'Essential',
+    price: 149,
     features: [
-      '3-page professional site (Home, About, Contact)',
-      'Fully mobile-friendly & SEO optimized',
-      'Fast, clean, & conversion-focused',
+      'Basic website design',
+      'Mobile responsive',
+      'Contact form',
+      'SEO optimization',
+      '1 revision',
     ],
-    priceId: 'price_starter',
+    mostPopular: false,
+    productId: 'price_1OyZHpGcK1oDqjyTJDV0SJjG',
   },
   {
-    name: 'Business Pro',
-    price: 1500,
+    title: 'Professional',
+    price: 249,
     features: [
-      '5-page website (Home, About, Services, Contact, Blog)',
-      'Lead capture form & basic automation',
-      'Custom branding & high-speed optimization',
+      'Advanced website design',
+      'Mobile responsive',
+      'Contact form',
+      'SEO optimization',
+      'E-commerce integration',
+      '3 revisions',
+      'Social media integration',
     ],
-    priceId: 'price_business',
+    mostPopular: true,
+    productId: 'price_1OyZHpGcK1oDqjyTQkfCZVUs',
   },
   {
-    name: 'Elite Custom Site',
-    price: 2500,
+    title: 'Premium',
+    price: 349,
     features: [
-      'Fully custom design with advanced features',
-      'E-commerce, booking systems, or interactive elements',
-      'Priority support & ongoing optimization',
+      'Premium website design',
+      'Mobile responsive',
+      'Contact form',
+      'Advanced SEO optimization',
+      'E-commerce integration',
+      'Unlimited revisions',
+      'Social media integration',
+      'Google Analytics setup',
+      'Blogging platform',
     ],
-    priceId: 'price_elite',
+    mostPopular: false,
+    productId: 'price_1OyZHqGcK1oDqjyTTw6JsMct',
   },
 ]
 
 const PricingSection = () => {
-  const [showCalculator, setShowCalculator] = useState(false);
-  const [processingTier, setProcessingTier] = useState<string | null>(null);
-  
-  const handlePayment = async (priceId: string, paymentType: 'full' | 'deposit' = 'full') => {
-    try {
-      // Set loading state
-      setProcessingTier(priceId + (paymentType === 'deposit' ? '-deposit' : ''));
-      
-      console.log('Sending checkout request:', { priceId, paymentType });
-      
-      // Call the backend to create a checkout session
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          priceId,
-          paymentType
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create checkout session');
-      }
-      
-      const { id: sessionId, error } = await response.json();
-      
-      if (error) {
-        console.error('Error creating checkout session:', error);
-        toast.error('Something went wrong. Please try again later.');
-        setProcessingTier(null);
-        return;
-      }
-      
-      // Redirect to Stripe Checkout
-      const stripe = await stripePromise;
-      if (!stripe) {
-        toast.error('Payment system failed to load. Please try again later.');
-        setProcessingTier(null);
-        return;
-      }
-      
-      const { error: redirectError } = await stripe.redirectToCheckout({
-        sessionId,
-      });
-      
-      if (redirectError) {
-        console.error('Error redirecting to checkout:', redirectError);
-        toast.error('Unable to redirect to checkout. Please try again later.');
-        setProcessingTier(null);
-      }
-    } catch (err: any) {
-      console.error('Payment error:', err);
-      toast.error(err.message || 'Something went wrong. Please try again later.');
-      setProcessingTier(null);
-    }
+  const [isLoading, setIsLoading] = useState<Record<string, boolean>>({})
+
+  const handleCheckout = async (priceId: string) => {
+    // Redirect to registration page with price ID as query parameter
+    window.location.href = `/auth/register?priceId=${priceId}`
   }
 
   return (
-    <section id="pricing" className="bg-gray-900 py-20">
-      <div className="section-container">
-        <h2 className="section-title text-center">Choose a Package & Get Started Today</h2>
-        
-        <div className="grid md:grid-cols-3 gap-8 mt-12">
+    <section id="pricing" className="py-20 bg-black">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight">
+            Website Design{' '}
+            <span className="bg-gradient-to-r from-red-500 to-red-800 bg-clip-text text-transparent">
+              Pricing
+            </span>
+          </h2>
+          <p className="mt-4 max-w-2xl mx-auto text-gray-400">
+            Choose the perfect plan to bring your vision to life
+          </p>
+        </div>
+
+        <div className="mt-16 grid gap-8 lg:grid-cols-3">
           {pricingTiers.map((tier) => (
-            <div key={tier.name} className="bg-black p-8 rounded-xl border border-gray-800 hover:border-kaizen-red transition-all flex flex-col">
-              <h3 className="text-2xl font-bold mb-2">{tier.name}</h3>
-              <p className="text-4xl font-bold mb-6">${tier.price}</p>
-              
-              <ul className="mb-8 flex-grow">
-                {tier.features.map((feature, index) => (
-                  <li key={index} className="mb-3 flex items-start">
-                    <span className="text-kaizen-red mr-2">✓</span> {feature}
+            <div
+              key={tier.title}
+              className={`relative rounded-2xl bg-gray-900 shadow-xl p-8 flex flex-col ${
+                tier.mostPopular ? 'border-2 border-red-600' : ''
+              }`}
+            >
+              {tier.mostPopular && (
+                <div className="absolute top-0 -translate-y-1/2 inset-x-0 mx-auto bg-red-600 px-4 py-1 rounded-full text-center text-sm font-medium">
+                  Most Popular
+                </div>
+              )}
+              <div className="mb-6">
+                <h3 className="text-xl font-bold">{tier.title}</h3>
+                <p className="mt-4 flex items-baseline">
+                  <span className="text-4xl font-extrabold tracking-tight">
+                    ${tier.price}
+                  </span>
+                  <span className="ml-1 text-gray-400">/mo</span>
+                </p>
+              </div>
+
+              <ul className="mt-6 space-y-4 flex-1">
+                {tier.features.map((feature) => (
+                  <li key={feature} className="flex items-start">
+                    <FaCheck className="text-green-500 mt-1 mr-2 flex-shrink-0" />
+                    <span>{feature}</span>
                   </li>
                 ))}
               </ul>
-              
-              <div className="space-y-3">
-                <button 
-                  onClick={() => handlePayment(tier.priceId, 'full')}
-                  className="btn-primary w-full"
-                  disabled={!!processingTier}
+
+              <div className="mt-8">
+                <button
+                  onClick={() => handleCheckout(tier.productId)}
+                  disabled={isLoading[tier.productId]}
+                  className={`w-full rounded-md px-4 py-3 flex items-center justify-center space-x-2 transition-colors ${
+                    tier.mostPopular
+                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                      : 'bg-gray-800 hover:bg-gray-700 text-white'
+                  }`}
                 >
-                  {processingTier === tier.priceId ? 'Processing...' : 'Pay Full Amount'}
-                </button>
-                
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-700"></div>
-                  </div>
-                  <div className="relative flex justify-center">
-                    <span className="bg-black px-2 text-sm text-gray-400">OR</span>
-                  </div>
-                </div>
-                
-                <button 
-                  onClick={() => handlePayment(tier.priceId, 'deposit')}
-                  className="w-full px-4 py-2 border border-kaizen-red text-kaizen-red rounded hover:bg-kaizen-red hover:bg-opacity-10 transition-colors"
-                  disabled={!!processingTier}
-                >
-                  {processingTier === tier.priceId + '-deposit' ? 'Processing...' : 'Pay $500 Deposit'}
+                  <span>{isLoading[tier.productId] ? 'Processing...' : 'Get Started'}</span>
+                  <FaChevronRight size={12} />
                 </button>
               </div>
             </div>
           ))}
         </div>
-        
-        {!showCalculator ? (
-          <div className="text-center mt-12">
-            <button 
-              onClick={() => setShowCalculator(true)}
-              className="btn-secondary"
-            >
-              Need something custom? Use our price calculator
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="mt-16 text-center">
-              <h3 className="text-2xl font-bold mb-8">Custom Website Calculator</h3>
-            </div>
-            <PricingCalculator />
-          </>
-        )}
+
+        <div className="mt-16 text-center">
+          <p className="text-gray-400">
+            Looking for a custom solution?{' '}
+            <Link href="/contact" className="text-red-500 font-medium hover:text-red-400">
+              Contact us
+            </Link>{' '}
+            for a personalized quote.
+          </p>
+        </div>
       </div>
     </section>
   )

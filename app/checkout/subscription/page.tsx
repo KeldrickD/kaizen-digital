@@ -1,254 +1,202 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { FaArrowLeft, FaSpinner, FaCheck } from 'react-icons/fa';
-import { getPlanById } from '@/app/data/subscriptionPlans';
+import { useSession } from 'next-auth/react';
+import { loadStripe } from '@stripe/stripe-js';
+import { FaSpinner, FaArrowLeft } from 'react-icons/fa';
 import Link from 'next/link';
+import Image from 'next/image';
 
-// Create a client component that uses useSearchParams
-function SubscriptionCheckout() {
+// Initialize Stripe
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) 
+  : null;
+
+export default function CheckoutPage() {
+  const { data: session, status } = useSession();
   const searchParams = useSearchParams();
-  const planId = searchParams.get('plan');
-  const plan = planId ? getPlanById(planId) : null;
+  const priceId = searchParams?.get('priceId');
   
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [companyName, setCompanyName] = useState('');
-  const [website, setWebsite] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successUrl, setSuccessUrl] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [productDetails, setProductDetails] = useState<{
+    name: string;
+    price: number;
+    description: string;
+  } | null>(null);
 
-  // Redirect to plans page if no valid plan is selected
   useEffect(() => {
-    if (!plan && typeof window !== 'undefined') {
-      window.location.href = '/maintenance';
+    // If we have a priceId, fetch the product details
+    if (priceId) {
+      const fetchProductDetails = async () => {
+        try {
+          const response = await fetch(`/api/products/${priceId}`);
+          if (!response.ok) {
+            throw new Error('Product not found');
+          }
+          const data = await response.json();
+          setProductDetails(data);
+        } catch (err) {
+          setError('Could not load product details');
+          console.error(err);
+        }
+      };
+      
+      fetchProductDetails();
     }
-  }, [plan]);
+  }, [priceId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      window.location.href = `/auth/customer-login?callbackUrl=${encodeURIComponent(window.location.href)}`;
+    }
+  }, [status]);
 
-    if (!plan) {
-      setError('Invalid plan selected.');
-      setIsLoading(false);
+  const handleCheckout = async () => {
+    if (!priceId) {
+      setError('No product selected');
       return;
     }
 
+    if (status !== 'authenticated') {
+      setError('You must be logged in to checkout');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
     try {
-      // Call API to create a Stripe checkout session for the subscription
-      const response = await fetch('/api/create-subscription', {
+      // Call the backend to create a checkout session
+      const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          planId: plan.id,
-          customerEmail: email,
-          customerName: name,
-          companyName,
-          website,
+        body: JSON.stringify({ 
+          priceId,
+          customerId: session?.user?.id,
+          customerEmail: session?.user?.email,
         }),
       });
-
-      const data = await response.json();
-
-      if (response.ok && data.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = data.url;
-      } else {
-        setError(data.error || 'Failed to create checkout session.');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create checkout session');
       }
-    } catch (err) {
-      console.error('Error creating subscription:', err);
-      setError('An unexpected error occurred. Please try again.');
-    } finally {
+      
+      const { id: sessionId, error } = await response.json();
+      
+      if (error) {
+        console.error('Error creating checkout session:', error);
+        setError('Something went wrong. Please try again later.');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Redirect to Stripe Checkout
+      const stripe = await stripePromise;
+      if (!stripe) {
+        setError('Payment system failed to load. Please try again later.');
+        setIsLoading(false);
+        return;
+      }
+      
+      const { error: redirectError } = await stripe.redirectToCheckout({
+        sessionId,
+      });
+      
+      if (redirectError) {
+        console.error('Error redirecting to checkout:', redirectError);
+        setError('Unable to redirect to checkout. Please try again later.');
+        setIsLoading(false);
+      }
+    } catch (err: any) {
+      console.error('Payment error:', err);
+      setError(err.message || 'Something went wrong. Please try again later.');
       setIsLoading(false);
     }
   };
 
-  if (!plan) {
-    return null; // Will redirect in useEffect
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-kaizen-black flex justify-center items-center">
+        <div className="text-center">
+          <FaSpinner className="animate-spin text-kaizen-red mx-auto mb-4" size={32} />
+          <p className="text-white">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-kaizen-black py-12">
-      <div className="max-w-4xl mx-auto px-4">
-        <Link 
-          href="/maintenance" 
-          className="inline-flex items-center mb-6 text-gray-400 hover:text-white transition-colors"
-        >
-          <FaArrowLeft className="mr-2" /> Back to Plans
-        </Link>
+    <div className="min-h-screen bg-kaizen-black flex items-center justify-center px-4 py-12">
+      <div className="max-w-md w-full bg-gray-900 rounded-xl shadow-lg p-8">
+        <div className="text-center mb-8">
+          <Image 
+            src="/logo.png" 
+            alt="Kaizen Digital Design Logo" 
+            width={150} 
+            height={60}
+            className="h-12 w-auto mx-auto" 
+          />
+          <h1 className="text-2xl font-bold mt-4">Complete Your Purchase</h1>
+        </div>
         
-        <div className="bg-gray-900 rounded-xl overflow-hidden">
-          <div className="p-6 md:p-8 border-b border-gray-800">
-            <h1 className="text-2xl md:text-3xl font-bold mb-2">Subscribe to {plan.name}</h1>
-            <p className="text-gray-400">Complete your information to begin your website maintenance subscription</p>
+        {error && (
+          <div className="p-4 bg-red-500 bg-opacity-20 border border-red-500 rounded-md mb-6">
+            <p className="text-red-400 text-sm">{error}</p>
           </div>
-          
-          <div className="grid md:grid-cols-2 gap-8 p-6 md:p-8">
-            {/* Checkout Form */}
-            <div>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {error && (
-                  <div className="p-3 bg-red-500 text-white rounded-md text-sm">
-                    {error}
-                  </div>
-                )}
-                
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium mb-1">
-                    Full Name
-                  </label>
-                  <input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:ring-kaizen-red focus:border-kaizen-red"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium mb-1">
-                    Email Address
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:ring-kaizen-red focus:border-kaizen-red"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="company" className="block text-sm font-medium mb-1">
-                    Company Name
-                  </label>
-                  <input
-                    id="company"
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:ring-kaizen-red focus:border-kaizen-red"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="website" className="block text-sm font-medium mb-1">
-                    Website URL (if existing)
-                  </label>
-                  <input
-                    id="website"
-                    type="url"
-                    value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
-                    placeholder="https://example.com"
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:ring-kaizen-red focus:border-kaizen-red"
-                  />
-                </div>
-                
-                <div className="pt-4">
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full py-3 px-4 bg-kaizen-red hover:bg-red-700 rounded-md font-medium flex items-center justify-center transition-colors disabled:opacity-70"
-                  >
-                    {isLoading ? (
-                      <>
-                        <FaSpinner className="animate-spin mr-2" />
-                        Processing...
-                      </>
-                    ) : (
-                      'Proceed to Payment'
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-            
-            {/* Order Summary */}
-            <div className="bg-gray-800 rounded-lg p-6">
-              <h3 className="text-xl font-bold mb-4">Subscription Summary</h3>
-              
-              <div className="space-y-4 mb-6">
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Plan</span>
-                  <span className="font-medium">{plan.name}</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Billing</span>
-                  <span className="font-medium">Monthly</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Amount</span>
-                  <span className="font-medium">${plan.price}/month</span>
-                </div>
-              </div>
-              
-              <div className="border-t border-gray-700 pt-4 mb-6">
-                <div className="flex justify-between font-bold">
-                  <span>Total (billed monthly)</span>
-                  <span>${plan.price}/month</span>
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex items-start">
-                  <span className="text-green-500 mr-2 mt-1">
-                    <FaCheck />
-                  </span>
-                  <span className="text-sm">Automatic monthly billing</span>
-                </div>
-                
-                <div className="flex items-start">
-                  <span className="text-green-500 mr-2 mt-1">
-                    <FaCheck />
-                  </span>
-                  <span className="text-sm">Cancel anytime with 30 days notice</span>
-                </div>
-                
-                <div className="flex items-start">
-                  <span className="text-green-500 mr-2 mt-1">
-                    <FaCheck />
-                  </span>
-                  <span className="text-sm">Secure payment processing by Stripe</span>
-                </div>
+        )}
+        
+        <div className="mb-8">
+          {productDetails ? (
+            <div className="bg-gray-800 rounded-lg p-5">
+              <h2 className="font-semibold text-lg mb-2">{productDetails.name}</h2>
+              <p className="text-gray-400 text-sm mb-3">{productDetails.description}</p>
+              <div className="flex justify-between items-center">
+                <span className="text-2xl font-bold">${productDetails.price}</span>
+                <span className="text-gray-400 text-sm">/month</span>
               </div>
             </div>
-          </div>
+          ) : priceId ? (
+            <div className="flex justify-center py-4">
+              <FaSpinner className="animate-spin text-kaizen-red" size={24} />
+            </div>
+          ) : (
+            <div className="text-center text-gray-400 py-4">
+              No product selected
+            </div>
+          )}
+        </div>
+        
+        <button
+          onClick={handleCheckout}
+          disabled={isLoading || !priceId || !productDetails}
+          className="w-full py-3 px-4 bg-kaizen-red hover:bg-red-700 rounded-md font-medium flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? (
+            <>
+              <FaSpinner className="animate-spin mr-2" />
+              Processing...
+            </>
+          ) : (
+            'Proceed to Payment'
+          )}
+        </button>
+        
+        <div className="mt-6 text-center">
+          <Link 
+            href="/pricing" 
+            className="text-gray-400 hover:text-white text-sm flex items-center justify-center"
+          >
+            <FaArrowLeft className="mr-1" size={12} />
+            Return to pricing
+          </Link>
         </div>
       </div>
     </div>
-  );
-}
-
-// Loading fallback component
-function CheckoutLoading() {
-  return (
-    <div className="min-h-screen bg-kaizen-black flex items-center justify-center">
-      <div className="flex flex-col items-center">
-        <FaSpinner className="animate-spin text-4xl mb-4 text-kaizen-red" />
-        <p className="text-gray-300">Loading checkout information...</p>
-      </div>
-    </div>
-  );
-}
-
-// Main page component with Suspense
-export default function SubscriptionCheckoutPage() {
-  return (
-    <Suspense fallback={<CheckoutLoading />}>
-      <SubscriptionCheckout />
-    </Suspense>
   );
 } 

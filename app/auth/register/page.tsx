@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FaSpinner } from 'react-icons/fa';
 
 export default function CustomerRegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const priceId = searchParams?.get('priceId');
+  
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,13 +52,21 @@ export default function CustomerRegisterPage() {
         return;
       }
 
-      // Set success state and prepare to redirect
+      // Set success state
       setSuccess(true);
-      
-      // Redirect to login page after a short delay
-      setTimeout(() => {
-        router.push('/auth/customer-login');
-      }, 2000);
+
+      // If there's a priceId, redirect to checkout
+      if (priceId) {
+        // Short delay before redirecting to checkout
+        setTimeout(() => {
+          router.push(`/checkout/subscription?priceId=${priceId}`);
+        }, 1500);
+      } else {
+        // Otherwise redirect to login page
+        setTimeout(() => {
+          router.push('/auth/customer-login');
+        }, 2000);
+      }
     } catch (error) {
       setError('An error occurred during registration');
       setIsLoading(false);
@@ -77,14 +88,18 @@ export default function CustomerRegisterPage() {
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-white">Create Account</h2>
           <p className="mt-2 text-sm text-gray-400">
-            Register for website maintenance services
+            {priceId ? 'Create your account to continue with your purchase' : 'Register for website maintenance services'}
           </p>
         </div>
         
         {success ? (
           <div className="text-center p-4 bg-green-900 bg-opacity-50 rounded-md">
             <p className="text-green-400 font-medium">Registration successful!</p>
-            <p className="text-gray-300 mt-2">Redirecting to login page...</p>
+            <p className="text-gray-300 mt-2">
+              {priceId 
+                ? 'Redirecting to checkout...' 
+                : 'Redirecting to login page...'}
+            </p>
             <div className="flex justify-center mt-3">
               <FaSpinner className="animate-spin text-green-400" size={24} />
             </div>
@@ -166,10 +181,10 @@ export default function CustomerRegisterPage() {
                 {isLoading ? (
                   <>
                     <FaSpinner className="animate-spin mr-2" />
-                    Processing...
+                    {priceId ? 'Creating Account...' : 'Registering...'}
                   </>
                 ) : (
-                  'Register'
+                  priceId ? 'Continue to Checkout' : 'Register'
                 )}
               </button>
             </div>
@@ -179,7 +194,7 @@ export default function CustomerRegisterPage() {
         <div className="text-center mt-4">
           <p className="text-sm text-gray-400">
             Already have an account?{' '}
-            <Link href="/auth/customer-login" className="text-kaizen-red hover:underline">
+            <Link href={priceId ? `/auth/customer-login?priceId=${priceId}` : "/auth/customer-login"} className="text-kaizen-red hover:underline">
               Sign in
             </Link>
           </p>
