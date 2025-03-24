@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
 // Initialize Stripe
@@ -6,12 +6,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
 });
 
-export async function GET(
-  request: Request,
-  { params }: { params: { priceId: string } }
-) {
+interface ProductRouteContext {
+  params: {
+    priceId: string;
+  };
+}
+
+export async function GET(request: NextRequest, context: ProductRouteContext) {
   try {
-    const { priceId } = params;
+    const { priceId } = context.params;
     
     if (!priceId) {
       return NextResponse.json(
