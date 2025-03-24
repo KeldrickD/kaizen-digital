@@ -6,19 +6,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-02-24.acacia',
 });
 
-// Define proper context type for route parameters
-type RouteContext = {
-  params: {
-    priceId: string;
-  };
-};
-
 export async function GET(
   request: Request,
-  context: RouteContext
+  { params }: { params: { priceId: string } }
 ) {
   try {
-    const { priceId } = context.params;
+    const { priceId } = params;
     
     if (!priceId) {
       return NextResponse.json(
