@@ -63,7 +63,7 @@ const HeroSection = () => {
                 {/* Real Estate Website Image */}
                 <div className="relative w-full" style={{ paddingBottom: '150%' }}>
                   <Image
-                    src="/images/realtor-website-preview.jpg"
+                    src="/images/realtor-website-preview.png"
                     alt="Real Estate Website Example"
                     fill
                     className="object-cover object-top"
