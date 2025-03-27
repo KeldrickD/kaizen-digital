@@ -171,6 +171,14 @@ const TestimonialsSection = () => {
                             height={240}
                             className="w-full h-full object-cover"
                           />
+                        ) : activeStudy === 2 ? (
+                          <Image
+                            src="/case-studies/firsttime-before.jpg"
+                            alt="First Time Home Buyers Website - Before"
+                            width={300}
+                            height={240}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           <p className="text-gray-400 flex items-center justify-center h-full">[Before Image]</p>
                         )}
@@ -191,6 +199,14 @@ const TestimonialsSection = () => {
                           <Image
                             src="/case-studies/metro-after.jpg"
                             alt="Metro Homes Group Website - After"
+                            width={300}
+                            height={240}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : activeStudy === 2 ? (
+                          <Image
+                            src="/case-studies/firsttime-after.jpg"
+                            alt="First Time Home Buyers Website - After"
                             width={300}
                             height={240}
                             className="w-full h-full object-cover"
