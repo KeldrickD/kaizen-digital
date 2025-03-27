@@ -18,4 +18,4 @@ prisma.$connect()
     console.error('Database connection error:', error);
   });
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma; 
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
