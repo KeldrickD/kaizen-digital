@@ -78,26 +78,91 @@ const HeroSection = () => {
                       <button className="bg-red-700 text-white py-3 px-6 rounded">VIEW LISTINGS</button>
                     </div>
                     
-                    <div className="h-64 bg-gradient-to-b from-blue-200 to-blue-300">
-                      <div className="h-full w-full relative">
-                        {/* House SVG */}
-                        <svg viewBox="0 0 200 100" className="absolute inset-0 w-full h-full opacity-50">
-                          <path d="M80,80 L80,40 L100,20 L120,40 L120,80 Z" fill="#334155" />
-                          <path d="M90,80 L90,50 L100,40 L110,50 L110,80 Z" fill="#475569" />
-                          <rect x="95" y="65" width="10" height="15" fill="#1e293b" />
-                          <rect x="85" y="55" width="8" height="8" fill="#e2e8f0" />
-                          <rect x="107" y="55" width="8" height="8" fill="#e2e8f0" />
-                        </svg>
+                    {/* Realistic House Image Section */}
+                    <div className="relative h-80 overflow-hidden">
+                      {/* House Image - Gradient Background with Photo-like Elements */}
+                      <div className="absolute inset-0 bg-gradient-to-b from-blue-100 to-purple-100">
+                        {/* Sky */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-blue-200 to-blue-100"></div>
+                        
+                        {/* Sun */}
+                        <div className="absolute top-5 right-10 w-16 h-16 rounded-full bg-yellow-200 opacity-70"></div>
+                        
+                        {/* Ground */}
+                        <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-green-600 to-green-500 opacity-60"></div>
+                        
+                        {/* Modern House */}
+                        <div className="absolute bottom-[12%] left-1/2 transform -translate-x-1/2 w-[80%] h-[55%]">
+                          {/* Main House Structure */}
+                          <div className="absolute bottom-0 w-full h-[65%] bg-gray-200 rounded-sm shadow-lg"></div>
+                          
+                          {/* Roof */}
+                          <div className="absolute bottom-[65%] left-0 right-0 h-[20%] bg-gray-700"></div>
+                          
+                          {/* Garage */}
+                          <div className="absolute bottom-0 left-0 w-[40%] h-[40%] bg-gray-300 border-t border-r border-gray-400"></div>
+                          
+                          {/* Windows - Main House */}
+                          <div className="absolute bottom-[30%] left-[45%] w-[20%] h-[18%] bg-blue-200 border border-gray-400 shadow-inner"></div>
+                          <div className="absolute bottom-[30%] left-[70%] w-[20%] h-[18%] bg-blue-200 border border-gray-400 shadow-inner"></div>
+                          
+                          {/* Door */}
+                          <div className="absolute bottom-0 right-[10%] w-[12%] h-[25%] bg-gray-800 shadow-md"></div>
+                          
+                          {/* Garage Door */}
+                          <div className="absolute bottom-[8%] left-[5%] w-[30%] h-[25%] bg-gray-100 border border-gray-400">
+                            <div className="absolute inset-0 grid grid-cols-2 grid-rows-3 gap-1 p-1">
+                              <div className="bg-gray-200"></div>
+                              <div className="bg-gray-200"></div>
+                              <div className="bg-gray-200"></div>
+                              <div className="bg-gray-200"></div>
+                              <div className="bg-gray-200"></div>
+                              <div className="bg-gray-200"></div>
+                            </div>
+                          </div>
+                          
+                          {/* Landscaping */}
+                          <div className="absolute bottom-[-2%] right-[5%] w-[15%] h-[10%] rounded-full bg-green-700 opacity-80"></div>
+                          <div className="absolute bottom-[-1%] right-[25%] w-[10%] h-[8%] rounded-full bg-green-700 opacity-80"></div>
+                          
+                          {/* Driveway */}
+                          <div className="absolute bottom-[-3%] left-[5%] w-[35%] h-[3%] bg-gray-400"></div>
+                        </div>
                       </div>
                     </div>
                     
+                    {/* Agent Profile Section */}
                     <div className="absolute bottom-0 left-0 right-0 flex items-center p-4 bg-white border-t border-gray-200">
-                      <div className="w-16 h-16 rounded-full bg-gray-300 mr-3 overflow-hidden flex items-center justify-center text-black">
-                        <svg viewBox="0 0 24 24" className="w-12 h-12">
-                          <circle cx="12" cy="10" r="5" fill="#64748b" />
-                          <path d="M12,15 C7,15 3,17.5 3,22 L21,22 C21,17.5 17,15 12,15 Z" fill="#64748b" />
-                        </svg>
+                      {/* Agent Photo - More Realistic */}
+                      <div className="w-16 h-16 rounded-full overflow-hidden mr-3 border border-gray-300 flex-shrink-0">
+                        <div className="w-full h-full bg-gradient-to-b from-gray-200 to-gray-300 relative">
+                          {/* Stylized Agent Photo */}
+                          <div className="absolute inset-0">
+                            {/* Head */}
+                            <div className="absolute top-[15%] left-1/2 transform -translate-x-1/2 w-[60%] h-[35%] rounded-full bg-[#e1c4ac]"></div>
+                            
+                            {/* Hair */}
+                            <div className="absolute top-[10%] left-1/2 transform -translate-x-1/2 w-[65%] h-[25%] rounded-t-full bg-[#413734]"></div>
+                            
+                            {/* Suit */}
+                            <div className="absolute top-[50%] left-0 right-0 bottom-0 bg-[#2c3e50]"></div>
+                            
+                            {/* Shirt */}
+                            <div className="absolute top-[50%] left-1/2 transform -translate-x-1/2 w-[40%] h-[20%] bg-white"></div>
+                            
+                            {/* Tie */}
+                            <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 w-[15%] h-[25%] bg-[#c0392b]"></div>
+                            
+                            {/* Eyes */}
+                            <div className="absolute top-[25%] left-[35%] w-[8%] h-[4%] rounded-full bg-[#2c3e50]"></div>
+                            <div className="absolute top-[25%] right-[35%] w-[8%] h-[4%] rounded-full bg-[#2c3e50]"></div>
+                            
+                            {/* Mouth */}
+                            <div className="absolute top-[35%] left-1/2 transform -translate-x-1/2 w-[20%] h-[3%] bg-[#c0392b]"></div>
+                          </div>
+                        </div>
                       </div>
+                      
                       <div className="text-black">
                         <div className="font-medium">John Smith</div>
                         <div className="text-sm text-gray-600">Real Estate Agent</div>
