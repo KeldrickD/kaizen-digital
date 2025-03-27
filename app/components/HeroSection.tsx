@@ -38,19 +38,19 @@ const HeroSection = () => {
             
             {/* Trust Indicators */}
             <div>
-              <p className="text-gray-400 text-sm mb-3">Trusted by agents from:</p>
+              <p className="text-gray-400 text-sm mb-3">Trusted by agents from top brokerages:</p>
               <div className="flex flex-wrap items-center gap-6">
-                <div className="opacity-70 hover:opacity-100 transition-opacity">
-                  <Image src="/logos/kw.png" alt="Keller Williams" width={120} height={40} />
+                <div className="bg-gray-800 py-2 px-4 rounded border border-gray-700 text-sm">
+                  Keller Williams
                 </div>
-                <div className="opacity-70 hover:opacity-100 transition-opacity">
-                  <Image src="/logos/remax.png" alt="RE/MAX" width={100} height={40} />
+                <div className="bg-gray-800 py-2 px-4 rounded border border-gray-700 text-sm">
+                  RE/MAX
                 </div>
-                <div className="opacity-70 hover:opacity-100 transition-opacity">
-                  <Image src="/logos/exp.png" alt="eXp Realty" width={100} height={40} />
+                <div className="bg-gray-800 py-2 px-4 rounded border border-gray-700 text-sm">
+                  eXp Realty
                 </div>
-                <div className="opacity-70 hover:opacity-100 transition-opacity">
-                  <Image src="/logos/cb.png" alt="Coldwell Banker" width={100} height={40} />
+                <div className="bg-gray-800 py-2 px-4 rounded border border-gray-700 text-sm">
+                  Coldwell Banker
                 </div>
               </div>
             </div>
@@ -60,13 +60,9 @@ const HeroSection = () => {
           <div className="relative">
             <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-2 shadow-2xl">
               <div className="rounded-lg overflow-hidden border border-gray-700">
-                <Image 
-                  src="/mockups/realtor-website.jpg" 
-                  alt="Real Estate Website Example" 
-                  width={600} 
-                  height={400}
-                  className="w-full h-auto"
-                />
+                <div className="w-full h-[400px] bg-gray-800 flex items-center justify-center">
+                  <p className="text-gray-400">Real Estate Website Preview</p>
+                </div>
               </div>
               
               {/* Floating stats cards */}
