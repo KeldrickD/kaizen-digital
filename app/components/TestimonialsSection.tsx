@@ -52,7 +52,7 @@ const caseStudies = [
     id: 2,
     client: "Metro Homes Group",
     industry: "Residential Brokerage",
-    beforeImage: "/case-studies/metro-before.svg",
+    beforeImage: "/case-studies/metro-before.jpg",
     afterImage: "/case-studies/metro-after.jpg",
     beforeStats: {
       loadTime: "6.5 seconds",
@@ -165,7 +165,7 @@ const TestimonialsSection = () => {
                           />
                         ) : activeStudy === 1 ? (
                           <Image
-                            src="/case-studies/metro-before.svg"
+                            src="/case-studies/metro-before.jpg"
                             alt="Metro Homes Group Website - Before"
                             width={300}
                             height={240}
