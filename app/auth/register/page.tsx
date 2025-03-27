@@ -18,11 +18,32 @@ function RegisterForm() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setDebugInfo(null);
     setIsLoading(true);
+
+    // Basic form validation
+    if (!name || name.length < 2) {
+      setError('Name must be at least 2 characters');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+      setError('Please enter a valid email address');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!password || password.length < 8) {
+      setError('Password must be at least 8 characters');
+      setIsLoading(false);
+      return;
+    }
 
     // Validate passwords match
     if (password !== confirmPassword) {
@@ -32,36 +53,53 @@ function RegisterForm() {
     }
 
     try {
+      console.log('Submitting registration with:', { name, email, priceId });
+      
+      const requestData = {
+        name,
+        email,
+        password,
+        ...(priceId ? { priceId } : {})
+      };
+      
+      console.log('Request payload:', JSON.stringify(requestData));
+      
       const response = await fetch('/api/customers/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name,
-          email,
-          password,
-          priceId
-        }),
+        body: JSON.stringify(requestData),
       });
 
       const data = await response.json();
+      console.log('Registration response:', data);
 
       if (!response.ok) {
+        // Show detailed error information for debugging
+        const errorDetails = typeof data.details === 'string' 
+          ? data.details 
+          : JSON.stringify(data.details || {});
+          
+        setDebugInfo(`Status: ${response.status}, Details: ${errorDetails}`);
         throw new Error(data.error || 'Something went wrong');
       }
 
       setSuccess(true);
       setIsLoading(false);
+      console.log('Registration successful!');
 
       // Redirect to checkout if priceId was provided
       if (priceId) {
+        console.log('Redirecting to checkout with priceId:', priceId);
         router.push(`/checkout/subscription?priceId=${priceId}`);
       } else {
         // Otherwise, redirect to dashboard
+        console.log('Redirecting to dashboard');
         router.push('/dashboard');
       }
     } catch (error: any) {
+      console.error('Registration error:', error);
       setError(error.message || 'An error occurred during registration.');
       setIsLoading(false);
     }
@@ -93,6 +131,9 @@ function RegisterForm() {
             {error && (
               <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 mb-6">
                 <p className="text-red-400">{error}</p>
+                {debugInfo && (
+                  <p className="text-gray-400 text-xs mt-2 font-mono break-all">Debug: {debugInfo}</p>
+                )}
               </div>
             )}
 
@@ -139,6 +180,7 @@ function RegisterForm() {
                 className="w-full px-4 py-2 border border-gray-700 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="••••••••"
               />
+              <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters</p>
             </div>
 
             <div>
