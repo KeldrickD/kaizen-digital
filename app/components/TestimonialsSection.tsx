@@ -3,86 +3,86 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 
-// Enhanced testimonials with more details
+// Real estate focused testimonials
 const testimonials = [
   {
-    quote: "I needed a site FAST, and Kaizen Digital delivered a sleek, modern website in just 2 days. My bookings tripled in the first month!",
-    author: "Mike R.",
-    role: "Personal Trainer",
-    image: "/testimonials/mike-r.jpg",
-    company: "FitLife Coaching"
-  },
-  {
-    quote: "Kaizen Digital didn't just build me a website – they built me a business asset. I highly recommend them!",
+    quote: "Kaizen Digital built my site in 2 days and I booked 3 seller appointments that same week. It's clean, fast, and it actually brings in leads!",
     author: "Sarah K.",
     role: "Realtor",
     image: "/testimonials/sarah-k.jpg",
-    company: "Prime Properties"
+    company: "Atlanta GA"
   },
   {
-    quote: "Super professional, fast, and affordable. I love my new website!",
-    author: "David C.",
-    role: "Barber Shop Owner",
-    image: "/testimonials/david-c.jpg",
-    company: "Classic Cuts"
+    quote: "The Top Producer package gave me everything I needed – MLS listings, CRM, SEO blog, retargeting – all done. It's a machine.",
+    author: "Marcus J.",
+    role: "Luxury Broker",
+    image: "/testimonials/marcus-j.jpg",
+    company: "Miami FL"
+  },
+  {
+    quote: "As a new agent, I needed to establish my online presence quickly. Kaizen delivered a professional website in 48 hours that made me look like a seasoned pro.",
+    author: "Jennifer W.",
+    role: "Real Estate Agent",
+    image: "/testimonials/jennifer-w.jpg",
+    company: "Keller Williams"
   }
 ]
 
-// Case studies with before and after data
+// Real estate focused case studies
 const caseStudies = [
   {
     id: 1,
-    client: "FitLife Coaching",
-    industry: "Fitness",
-    beforeImage: "/case-studies/fitlife-before.jpg",
-    afterImage: "/case-studies/fitlife-after.jpg",
+    client: "Coastal Luxury Realty",
+    industry: "Luxury Real Estate",
+    beforeImage: "/case-studies/coastal-before.jpg",
+    afterImage: "/case-studies/coastal-after.jpg",
     beforeStats: {
-      loadTime: "8.3 seconds",
-      mobileScore: "42/100",
-      monthlyLeads: "5-10"
+      loadTime: "7.2 seconds",
+      mobileScore: "54/100",
+      monthlyLeads: "3-5"
     },
     afterStats: {
-      loadTime: "1.8 seconds",
-      mobileScore: "96/100", 
-      monthlyLeads: "30-40"
+      loadTime: "1.6 seconds",
+      mobileScore: "98/100", 
+      monthlyLeads: "18-25"
     },
-    summary: "Mike's old website was slow, outdated, and didn't convert visitors to clients. We created a high-performance site that loads 4x faster and helped triple his monthly bookings."
+    summary: "Mark's luxury property listings weren't getting the attention they deserved. We created a showcase-style site with high-res property galleries and virtual tours, increasing qualified buyer inquiries by 400%."
   },
   {
     id: 2,
-    client: "Prime Properties",
-    industry: "Real Estate",
-    beforeImage: "/case-studies/prime-before.jpg",
-    afterImage: "/case-studies/prime-after.jpg",
+    client: "Metro Homes Group",
+    industry: "Residential Brokerage",
+    beforeImage: "/case-studies/metro-before.jpg",
+    afterImage: "/case-studies/metro-after.jpg",
     beforeStats: {
       loadTime: "6.5 seconds",
-      mobileScore: "56/100",
+      mobileScore: "48/100",
       monthlyLeads: "8-12"
     },
     afterStats: {
-      loadTime: "1.5 seconds",
-      mobileScore: "98/100",
-      monthlyLeads: "25-30"
+      loadTime: "1.4 seconds",
+      mobileScore: "97/100",
+      monthlyLeads: "35-45"
     },
-    summary: "Sarah's real estate website wasn't mobile-friendly and failed to showcase properties effectively. Our redesign improved mobile usability and implemented advanced property search features, increasing lead generation by 240%."
+    summary: "This real estate team's website wasn't mobile-friendly and failed to capture leads. Our redesign added IDX integration and home valuation tools, boosting qualified seller leads by 275%."
   },
   {
     id: 3,
-    client: "Classic Cuts",
-    industry: "Personal Services",
-    beforeImage: "/case-studies/classic-before.jpg",
-    afterImage: "/case-studies/classic-after.jpg",
+    client: "First Time Home Buyers",
+    industry: "Real Estate Education",
+    beforeImage: "/case-studies/firsttime-before.jpg",
+    afterImage: "/case-studies/firsttime-after.jpg",
     beforeStats: {
-      loadTime: "7.2 seconds",
-      mobileScore: "48/100",
-      monthlyLeads: "10-15"
+      loadTime: "8.4 seconds",
+      mobileScore: "39/100",
+      monthlyLeads: "5-8"
     },
     afterStats: {
       loadTime: "1.7 seconds",
       mobileScore: "95/100",
-      monthlyLeads: "40-50"
+      monthlyLeads: "30-40"
     },
-    summary: "David's barbershop was losing customers to competitors with better online presence. We built a sleek, modern site with online booking that has helped him grow his client base by 300%."
+    summary: "Lisa's real estate education business needed a platform to attract first-time buyers. We built a resource hub with downloadable guides, increasing lead capture and consultation bookings by 500%."
   }
 ];
 
@@ -92,7 +92,7 @@ const TestimonialsSection = () => {
   return (
     <section className="bg-gray-900 py-20">
       <div className="section-container">
-        <h2 className="section-title text-center">What Business Owners Say About Kaizen Digital</h2>
+        <h2 className="section-title text-center">What Real Estate Professionals Say About Kaizen Digital</h2>
         
         <div className="grid md:grid-cols-3 gap-8 mt-12">
           {testimonials.map((testimonial, index) => (
@@ -125,15 +125,15 @@ const TestimonialsSection = () => {
         
         {/* Case Studies Section */}
         <div className="mt-20">
-          <h2 className="section-title text-center mb-12">Case Studies: Before & After</h2>
+          <h2 className="section-title text-center mb-12">Real Estate Success Stories: Before & After</h2>
           
           {/* Case Study Navigation */}
-          <div className="flex justify-center mb-10">
+          <div className="flex flex-wrap justify-center mb-10">
             {caseStudies.map((study, index) => (
               <button
                 key={study.id}
                 onClick={() => setActiveStudy(index)}
-                className={`mx-2 px-4 py-2 rounded ${
+                className={`mx-2 px-4 py-2 mb-2 rounded ${
                   activeStudy === index 
                     ? 'bg-kaizen-red text-white' 
                     : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
@@ -149,7 +149,7 @@ const TestimonialsSection = () => {
             <div className="grid md:grid-cols-2 gap-0">
               {/* Before & After Images */}
               <div className="p-6 border-r border-gray-700">
-                <h3 className="text-xl font-bold mb-4 text-center">Visual Transformation</h3>
+                <h3 className="text-xl font-bold mb-4 text-center">Website Transformation</h3>
                 <div className="relative">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -198,7 +198,7 @@ const TestimonialsSection = () => {
                 
                 <div className="text-center">
                   <p className="text-lg font-bold text-kaizen-red">
-                    Ready for similar results?
+                    Want to grow your real estate business?
                   </p>
                 </div>
               </div>
@@ -208,7 +208,7 @@ const TestimonialsSection = () => {
         
         <div className="text-center mt-12">
           <a href="#pricing" className="btn-primary">
-            Let's Build Yours Today
+            Build My Realtor Website
           </a>
         </div>
       </div>
