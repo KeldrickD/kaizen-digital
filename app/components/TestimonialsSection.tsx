@@ -52,7 +52,7 @@ const caseStudies = [
     id: 2,
     client: "Metro Homes Group",
     industry: "Residential Brokerage",
-    beforeImage: "/case-studies/metro-before.jpg",
+    beforeImage: "/case-studies/metro-before.svg",
     afterImage: "/case-studies/metro-after.jpg",
     beforeStats: {
       loadTime: "6.5 seconds",
@@ -163,6 +163,14 @@ const TestimonialsSection = () => {
                             height={240}
                             className="w-full h-full object-cover"
                           />
+                        ) : activeStudy === 1 ? (
+                          <Image
+                            src="/case-studies/metro-before.svg"
+                            alt="Metro Homes Group Website - Before"
+                            width={300}
+                            height={240}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           <p className="text-gray-400 flex items-center justify-center h-full">[Before Image]</p>
                         )}
@@ -175,6 +183,14 @@ const TestimonialsSection = () => {
                           <Image
                             src="/case-studies/coastal-after.jpg"
                             alt="Coastal Luxury Realty Website - After"
+                            width={300}
+                            height={240}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : activeStudy === 1 ? (
+                          <Image
+                            src="/case-studies/metro-after.jpg"
+                            alt="Metro Homes Group Website - After"
                             width={300}
                             height={240}
                             className="w-full h-full object-cover"
