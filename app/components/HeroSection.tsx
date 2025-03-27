@@ -59,38 +59,50 @@ const HeroSection = () => {
           <div className="relative">
             <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-2 shadow-2xl">
               <div className="rounded-lg overflow-hidden border border-gray-700">
-                {/* Real Estate Website Mockup */}
-                <div className="bg-white text-black min-h-[600px] relative">
-                  {/* Header */}
-                  <div className="p-4 flex justify-between items-center border-b border-gray-200">
-                    <div className="font-bold text-xl">käpstone</div>
-                    <div className="flex gap-6">
-                      <div>HOME</div>
-                      <div>ABOUT</div>
-                      <div>CONTACT</div>
+                {/* Real Estate Website Screenshot */}
+                <div className="relative" style={{ paddingBottom: '150%' }}>
+                  <div className="absolute inset-0 bg-white">
+                    {/* This is a simplified version of the real estate website UI as seen in the image */}
+                    <div className="flex justify-between items-center p-4 border-b border-gray-200">
+                      <div className="font-serif font-bold text-black text-xl">käpstone</div>
+                      <div className="flex space-x-6 text-sm text-black">
+                        <span>HOME</span>
+                        <span>ABOUT</span>
+                        <span>CONTACT</span>
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* Hero Content */}
-                  <div className="p-6">
-                    <h2 className="text-4xl font-bold mb-4">Find Your Dream Home</h2>
-                    <p className="mb-4">Explore our listings of beautiful homes in your area.</p>
-                    <button className="bg-red-600 text-white px-6 py-2 rounded">VIEW LISTINGS</button>
-                  </div>
-                  
-                  {/* House Image */}
-                  <div className="bg-gray-200 h-[300px] mt-4 flex items-center justify-center">
-                    <div className="text-center">
-                      <p className="text-gray-500">[House Image]</p>
+                    
+                    <div className="p-6 text-black">
+                      <h2 className="font-serif text-5xl font-bold mb-2">Find Your<br />Dream Home</h2>
+                      <p className="text-lg mb-5">Explore our listings of beautiful homes<br />in your area.</p>
+                      <button className="bg-red-700 text-white py-3 px-6 rounded">VIEW LISTINGS</button>
                     </div>
-                  </div>
-                  
-                  {/* Agent Info */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4 flex items-center bg-white border-t border-gray-200">
-                    <div className="bg-gray-300 w-16 h-16 rounded-full mr-4"></div>
-                    <div>
-                      <div className="font-bold">John Smith</div>
-                      <div className="text-sm text-gray-600">Real Estate Agent</div>
+                    
+                    <div className="h-64 bg-gradient-to-b from-blue-200 to-blue-300">
+                      <div className="h-full w-full relative">
+                        {/* House SVG */}
+                        <svg viewBox="0 0 200 100" className="absolute inset-0 w-full h-full opacity-50">
+                          <path d="M80,80 L80,40 L100,20 L120,40 L120,80 Z" fill="#334155" />
+                          <path d="M90,80 L90,50 L100,40 L110,50 L110,80 Z" fill="#475569" />
+                          <rect x="95" y="65" width="10" height="15" fill="#1e293b" />
+                          <rect x="85" y="55" width="8" height="8" fill="#e2e8f0" />
+                          <rect x="107" y="55" width="8" height="8" fill="#e2e8f0" />
+                        </svg>
+                      </div>
+                    </div>
+                    
+                    <div className="absolute bottom-0 left-0 right-0 flex items-center p-4 bg-white border-t border-gray-200">
+                      <div className="w-16 h-16 rounded-full bg-gray-300 mr-3 overflow-hidden flex items-center justify-center text-black">
+                        <svg viewBox="0 0 24 24" className="w-12 h-12">
+                          <circle cx="12" cy="10" r="5" fill="#64748b" />
+                          <path d="M12,15 C7,15 3,17.5 3,22 L21,22 C21,17.5 17,15 12,15 Z" fill="#64748b" />
+                        </svg>
+                      </div>
+                      <div className="text-black">
+                        <div className="font-medium">John Smith</div>
+                        <div className="text-sm text-gray-600">Real Estate Agent</div>
+                        <div className="text-sm text-gray-600">Upstate Realty</div>
+                      </div>
                     </div>
                   </div>
                 </div>
