@@ -60,9 +60,14 @@ const HeroSection = () => {
           <div className="relative">
             <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-2 shadow-2xl">
               <div className="rounded-lg overflow-hidden border border-gray-700">
-                <div className="w-full h-[400px] bg-gray-800 flex items-center justify-center">
-                  <p className="text-gray-400">Real Estate Website Preview</p>
-                </div>
+                <Image 
+                  src="/mockups/realtor-website-preview.jpg" 
+                  alt="Kapstone Real Estate Website Example"
+                  width={600}
+                  height={900}
+                  className="w-full h-auto"
+                  priority
+                />
               </div>
               
               {/* Floating stats cards */}
