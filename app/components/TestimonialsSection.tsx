@@ -34,7 +34,7 @@ const caseStudies = [
     id: 1,
     client: "Coastal Luxury Realty",
     industry: "Luxury Real Estate",
-    beforeImage: "/case-studies/coastal-before.jpg",
+    beforeImage: "/case-studies/coastal-before.svg",
     afterImage: "/case-studies/coastal-after.jpg",
     beforeStats: {
       loadTime: "7.2 seconds",
@@ -154,14 +154,34 @@ const TestimonialsSection = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-center mb-2 text-gray-400">Before</p>
-                      <div className="bg-gray-700 h-60 rounded flex items-center justify-center">
-                        <p className="text-gray-400">[Before Image]</p>
+                      <div className="bg-gray-700 h-60 rounded overflow-hidden">
+                        {activeStudy === 0 ? (
+                          <Image
+                            src="/case-studies/coastal-before.svg"
+                            alt="Coastal Luxury Realty Website - Before"
+                            width={300}
+                            height={240}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <p className="text-gray-400 flex items-center justify-center h-full">[Before Image]</p>
+                        )}
                       </div>
                     </div>
                     <div>
                       <p className="text-center mb-2 text-gray-400">After</p>
-                      <div className="bg-gray-700 h-60 rounded flex items-center justify-center">
-                        <p className="text-gray-400">[After Image]</p>
+                      <div className="bg-gray-700 h-60 rounded overflow-hidden">
+                        {activeStudy === 0 ? (
+                          <Image
+                            src="/case-studies/coastal-after.jpg"
+                            alt="Coastal Luxury Realty Website - After"
+                            width={300}
+                            height={240}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <p className="text-gray-400 flex items-center justify-center h-full">[After Image]</p>
+                        )}
                       </div>
                     </div>
                   </div>
