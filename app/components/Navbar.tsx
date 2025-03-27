@@ -51,6 +51,7 @@ export default function Navbar() {
             <NavLink href="/portfolio">Portfolio</NavLink>
             <NavLink href="/about">About</NavLink>
             <NavLink href="/contact">Contact</NavLink>
+            <NavLink href="/for-realtors">For Realtors</NavLink>
             
             {/* Auth buttons */}
             <Link 
@@ -90,6 +91,7 @@ export default function Navbar() {
           <MobileNavLink href="/portfolio" onClick={() => setIsMenuOpen(false)}>Portfolio</MobileNavLink>
           <MobileNavLink href="/about" onClick={() => setIsMenuOpen(false)}>About</MobileNavLink>
           <MobileNavLink href="/contact" onClick={() => setIsMenuOpen(false)}>Contact</MobileNavLink>
+          <MobileNavLink href="/for-realtors" onClick={() => setIsMenuOpen(false)}>For Realtors</MobileNavLink>
           
           {/* Auth buttons for mobile */}
           <div className="pt-2 mt-2 border-t border-gray-700 flex space-x-2">
