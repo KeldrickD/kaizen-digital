@@ -9,15 +9,28 @@ const HeroSection = () => {
       <div className="section-container">
         <div className="max-w-3xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4">
-            Your Business Deserves More Than Just a Website – It Needs a Digital Advantage.
+            Real Estate Websites That Close Listings for You
           </h1>
           <p className="text-xl md:text-2xl mb-8 text-gray-300">
-            At Kaizen Digital, we create high-performance websites that attract, engage, and convert. 
-            Let's build your business a digital home that works as hard as you do.
+            Get a stunning, lead-generating real estate website in 48 hours.
           </p>
+          <div className="flex justify-center gap-4 mb-8">
+            <div className="flex items-center">
+              <span className="text-green-500 font-bold mr-2">✅</span>
+              <span className="text-white">MLS/IDX Ready</span>
+            </div>
+            <div className="flex items-center">
+              <span className="text-green-500 font-bold mr-2">✅</span>
+              <span className="text-white">SEO for Local Buyers & Sellers</span>
+            </div>
+            <div className="flex items-center">
+              <span className="text-green-500 font-bold mr-2">✅</span>
+              <span className="text-white">Mobile-Optimized</span>
+            </div>
+          </div>
           <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
             <Link href="#pricing" className="btn-primary text-lg">
-              Get Your Website in 48 Hours
+              Get Your Realtor Website Now
             </Link>
             <a 
               href="https://calendly.com/kaizendigitaldesign/30min" 
@@ -32,7 +45,7 @@ const HeroSection = () => {
             </a>
           </div>
           <p className="text-gray-400 text-sm mt-4">
-            No credit card required. 10-minute discovery call to discuss your needs.
+            No credit card required. 10-minute discovery call to discuss your real estate website needs.
           </p>
         </div>
       </div>
