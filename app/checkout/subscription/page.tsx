@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { loadStripe } from '@stripe/stripe-js';
@@ -9,22 +9,17 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 // Initialize Stripe
-const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
-  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) 
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
   : null;
 
-export default function CheckoutPage() {
-  const { data: session, status } = useSession();
+function SubscriptionCheckout() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [productDetails, setProductDetails] = useState<any>(null);
+  const [error, setError] = useState('');
   const searchParams = useSearchParams();
   const priceId = searchParams?.get('priceId');
-  
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [productDetails, setProductDetails] = useState<{
-    name: string;
-    price: number;
-    description: string;
-  } | null>(null);
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     // If we have a priceId, fetch the product details
@@ -47,156 +42,183 @@ export default function CheckoutPage() {
     }
   }, [priceId]);
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      window.location.href = `/auth/customer-login?callbackUrl=${encodeURIComponent(window.location.href)}`;
-    }
-  }, [status]);
-
   const handleCheckout = async () => {
-    if (!priceId) {
-      setError('No product selected');
-      return;
-    }
-
-    if (status !== 'authenticated') {
-      setError('You must be logged in to checkout');
-      return;
-    }
-
+    if (!priceId) return;
+    
     setIsLoading(true);
-    setError('');
-
+    
     try {
-      // Call the backend to create a checkout session
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           priceId,
-          customerId: session?.user?.id,
-          customerEmail: session?.user?.email,
+          customerId: session?.user?.stripeCustomerId
         }),
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create checkout session');
-      }
+      const { sessionId, url } = await response.json();
       
-      const { id: sessionId, error } = await response.json();
-      
-      if (error) {
-        console.error('Error creating checkout session:', error);
-        setError('Something went wrong. Please try again later.');
-        setIsLoading(false);
-        return;
-      }
-      
-      // Redirect to Stripe Checkout
-      const stripe = await stripePromise;
-      if (!stripe) {
-        setError('Payment system failed to load. Please try again later.');
-        setIsLoading(false);
-        return;
-      }
-      
-      const { error: redirectError } = await stripe.redirectToCheckout({
-        sessionId,
-      });
-      
-      if (redirectError) {
-        console.error('Error redirecting to checkout:', redirectError);
-        setError('Unable to redirect to checkout. Please try again later.');
+      if (url) {
+        window.location.href = url;
+      } else {
+        setError('Failed to create checkout session');
         setIsLoading(false);
       }
-    } catch (err: any) {
-      console.error('Payment error:', err);
-      setError(err.message || 'Something went wrong. Please try again later.');
+    } catch (err) {
+      console.error('Error:', err);
+      setError('An error occurred during checkout');
       setIsLoading(false);
     }
   };
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-kaizen-black flex justify-center items-center">
+      <div className="min-h-screen bg-kaizen-black flex items-center justify-center">
         <div className="text-center">
-          <FaSpinner className="animate-spin text-kaizen-red mx-auto mb-4" size={32} />
-          <p className="text-white">Loading...</p>
+          <FaSpinner className="animate-spin text-white mx-auto text-4xl" />
+          <p className="text-white mt-4">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-kaizen-black flex items-center justify-center p-6">
+        <div className="bg-gray-900 p-8 rounded-xl shadow-lg max-w-md w-full">
+          <div className="text-center mb-8">
+            <Image
+              src="/logo.png"
+              alt="Kaizen Digital Design Logo"
+              width={200}
+              height={80}
+              className="mx-auto"
+            />
+            <h2 className="text-2xl font-bold mt-4 text-white">Sign In Required</h2>
+            <p className="text-gray-400 mt-2">
+              Please sign in to complete your purchase
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <Link
+              href={`/auth/register?priceId=${priceId}`}
+              className="w-full block bg-red-600 hover:bg-red-700 text-white font-medium py-3 rounded-lg text-center"
+            >
+              Create an Account
+            </Link>
+            
+            <Link
+              href={`/auth/signin?priceId=${priceId}`}
+              className="w-full block border border-gray-700 hover:border-gray-600 bg-gray-800 hover:bg-gray-700 text-white font-medium py-3 rounded-lg text-center"
+            >
+              Sign In
+            </Link>
+            
+            <Link
+              href="/"
+              className="flex items-center justify-center text-gray-400 hover:text-white mt-6"
+            >
+              <FaArrowLeft className="mr-2" />
+              Return to Home
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-kaizen-black flex items-center justify-center px-4 py-12">
-      <div className="max-w-md w-full bg-gray-900 rounded-xl shadow-lg p-8">
-        <div className="text-center mb-8">
-          <Image 
-            src="/logo.png" 
-            alt="Kaizen Digital Design Logo" 
-            width={150} 
-            height={60}
-            className="h-12 w-auto mx-auto" 
-          />
-          <h1 className="text-2xl font-bold mt-4">Complete Your Purchase</h1>
-        </div>
-        
-        {error && (
-          <div className="p-4 bg-red-500 bg-opacity-20 border border-red-500 rounded-md mb-6">
-            <p className="text-red-400 text-sm">{error}</p>
+    <div className="min-h-screen bg-kaizen-black flex flex-col">
+      <main className="flex-grow flex items-center justify-center p-6">
+        <div className="bg-gray-900 p-8 rounded-xl shadow-lg max-w-md w-full">
+          <div className="text-center mb-8">
+            <Image
+              src="/logo.png"
+              alt="Kaizen Digital Design Logo"
+              width={200}
+              height={80}
+              className="mx-auto"
+            />
+            <h2 className="text-2xl font-bold mt-4 text-white">Complete Your Purchase</h2>
           </div>
-        )}
-        
-        <div className="mb-8">
-          {productDetails ? (
-            <div className="bg-gray-800 rounded-lg p-5">
-              <h2 className="font-semibold text-lg mb-2">{productDetails.name}</h2>
-              <p className="text-gray-400 text-sm mb-3">{productDetails.description}</p>
-              <div className="flex justify-between items-center">
-                <span className="text-2xl font-bold">${productDetails.price}</span>
-                <span className="text-gray-400 text-sm">/month</span>
-              </div>
+          
+          {error && (
+            <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 mb-6">
+              <p className="text-red-400">{error}</p>
             </div>
-          ) : priceId ? (
-            <div className="flex justify-center py-4">
-              <FaSpinner className="animate-spin text-kaizen-red" size={24} />
+          )}
+          
+          {productDetails ? (
+            <div className="space-y-6">
+              <div className="bg-gray-800 p-6 rounded-lg">
+                <h3 className="text-lg font-medium text-white">{productDetails.name}</h3>
+                <p className="text-gray-400 mt-1">{productDetails.description}</p>
+                
+                <div className="mt-4 flex justify-between items-center">
+                  <span className="text-gray-300">Price</span>
+                  <span className="text-xl font-bold text-white">
+                    ${productDetails.price} / {productDetails.interval}
+                  </span>
+                </div>
+              </div>
+              
+              <button
+                onClick={handleCheckout}
+                disabled={isLoading}
+                className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 transition duration-150 flex items-center justify-center"
+              >
+                {isLoading ? (
+                  <>
+                    <FaSpinner className="animate-spin mr-2" />
+                    Processing...
+                  </>
+                ) : (
+                  'Proceed to Payment'
+                )}
+              </button>
+              
+              <p className="text-center text-gray-500 text-sm">
+                You'll be redirected to Stripe's secure checkout page.
+              </p>
+            </div>
+          ) : !priceId ? (
+            <div className="text-center text-gray-400">
+              <p>No subscription selected. Please select a plan first.</p>
+              <Link
+                href="/#pricing"
+                className="flex items-center justify-center text-blue-400 hover:text-blue-300 mt-4"
+              >
+                <FaArrowLeft className="mr-2" />
+                Return to Pricing
+              </Link>
             </div>
           ) : (
-            <div className="text-center text-gray-400 py-4">
-              No product selected
+            <div className="text-center p-8">
+              <FaSpinner className="animate-spin text-white mx-auto text-3xl" />
+              <p className="text-gray-300 mt-4">Loading subscription details...</p>
             </div>
           )}
         </div>
-        
-        <button
-          onClick={handleCheckout}
-          disabled={isLoading || !priceId || !productDetails}
-          className="w-full py-3 px-4 bg-kaizen-red hover:bg-red-700 rounded-md font-medium flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? (
-            <>
-              <FaSpinner className="animate-spin mr-2" />
-              Processing...
-            </>
-          ) : (
-            'Proceed to Payment'
-          )}
-        </button>
-        
-        <div className="mt-6 text-center">
-          <Link 
-            href="/pricing" 
-            className="text-gray-400 hover:text-white text-sm flex items-center justify-center"
-          >
-            <FaArrowLeft className="mr-1" size={12} />
-            Return to pricing
-          </Link>
+      </main>
+    </div>
+  );
+}
+
+export default function SubscriptionCheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-kaizen-black flex items-center justify-center">
+        <div className="text-center">
+          <FaSpinner className="animate-spin text-white mx-auto text-4xl" />
+          <p className="text-white mt-4">Loading checkout...</p>
         </div>
       </div>
-    </div>
+    }>
+      <SubscriptionCheckout />
+    </Suspense>
   );
 } 
