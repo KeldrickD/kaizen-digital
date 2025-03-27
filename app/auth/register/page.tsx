@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FaSpinner } from 'react-icons/fa';
 
-export default function CustomerRegisterPage() {
+function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const priceId = searchParams?.get('priceId');
@@ -41,79 +41,63 @@ export default function CustomerRegisterPage() {
           name,
           email,
           password,
+          priceId
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Registration failed');
-        setIsLoading(false);
-        return;
+        throw new Error(data.error || 'Something went wrong');
       }
 
-      // Set success state
       setSuccess(true);
+      setIsLoading(false);
 
-      // If there's a priceId, redirect to checkout
+      // Redirect to checkout if priceId was provided
       if (priceId) {
-        // Short delay before redirecting to checkout
-        setTimeout(() => {
-          router.push(`/checkout/subscription?priceId=${priceId}`);
-        }, 1500);
+        router.push(`/checkout/subscription?priceId=${priceId}`);
       } else {
-        // Otherwise redirect to login page
-        setTimeout(() => {
-          router.push('/auth/customer-login');
-        }, 2000);
+        // Otherwise, redirect to dashboard
+        router.push('/dashboard');
       }
-    } catch (error) {
-      setError('An error occurred during registration');
+    } catch (error: any) {
+      setError(error.message || 'An error occurred during registration.');
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-kaizen-black flex items-center justify-center px-4">
-      <div className="max-w-md w-full space-y-8 bg-gray-900 p-10 rounded-xl shadow-lg">
-        <div className="text-center">
-          <div className="flex justify-center">
+    <div className="bg-kaizen-black min-h-screen flex items-center justify-center p-4">
+      <div className="bg-gray-900 p-8 rounded-lg shadow-xl w-full max-w-md">
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-block">
             <Image 
               src="/logo.png" 
               alt="Kaizen Digital Design Logo" 
-              width={150} 
-              height={60}
-              className="h-16 w-auto" 
+              width={200} 
+              height={80}
+              className="mx-auto"
             />
-          </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-white">Create Account</h2>
-          <p className="mt-2 text-sm text-gray-400">
-            {priceId ? 'Create your account to continue with your purchase' : 'Register for website maintenance services'}
-          </p>
+          </Link>
+          <h1 className="text-2xl font-bold mt-4 text-white">Create an Account</h1>
+          <p className="text-gray-400 mt-2">Join the Kaizen Digital family</p>
         </div>
-        
+
         {success ? (
-          <div className="text-center p-4 bg-green-900 bg-opacity-50 rounded-md">
-            <p className="text-green-400 font-medium">Registration successful!</p>
-            <p className="text-gray-300 mt-2">
-              {priceId 
-                ? 'Redirecting to checkout...' 
-                : 'Redirecting to login page...'}
-            </p>
-            <div className="flex justify-center mt-3">
-              <FaSpinner className="animate-spin text-green-400" size={24} />
-            </div>
+          <div className="bg-green-900/30 border border-green-700 rounded-lg p-4 mb-6 text-center">
+            <p className="text-green-400">Registration successful! Redirecting...</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="p-3 bg-red-500 text-white rounded-md text-sm">
-                {error}
+              <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 mb-6">
+                <p className="text-red-400">{error}</p>
               </div>
             )}
-            
+
             <div>
-              <label htmlFor="name" className="block text-sm font-medium mb-1">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">
                 Full Name
               </label>
               <input
@@ -122,12 +106,13 @@ export default function CustomerRegisterPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:ring-kaizen-red focus:border-kaizen-red"
+                className="w-full px-4 py-2 border border-gray-700 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="John Doe"
               />
             </div>
-            
+
             <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
                 Email Address
               </label>
               <input
@@ -136,12 +121,13 @@ export default function CustomerRegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:ring-kaizen-red focus:border-kaizen-red"
+                className="w-full px-4 py-2 border border-gray-700 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="john@example.com"
               />
             </div>
-            
+
             <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">
                 Password
               </label>
               <input
@@ -150,16 +136,13 @@ export default function CustomerRegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={8}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:ring-kaizen-red focus:border-kaizen-red"
+                className="w-full px-4 py-2 border border-gray-700 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="••••••••"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Must be at least 8 characters
-              </p>
             </div>
-            
+
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-1">
                 Confirm Password
               </label>
               <input
@@ -168,38 +151,49 @@ export default function CustomerRegisterPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:ring-kaizen-red focus:border-kaizen-red"
+                className="w-full px-4 py-2 border border-gray-700 bg-gray-800 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="••••••••"
               />
             </div>
-            
-            <div className="pt-4">
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3 px-4 bg-kaizen-red hover:bg-red-700 rounded-md font-medium flex items-center justify-center transition-colors disabled:opacity-70"
-              >
-                {isLoading ? (
-                  <>
-                    <FaSpinner className="animate-spin mr-2" />
-                    {priceId ? 'Creating Account...' : 'Registering...'}
-                  </>
-                ) : (
-                  priceId ? 'Continue to Checkout' : 'Register'
-                )}
-              </button>
-            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-150 flex items-center justify-center"
+            >
+              {isLoading ? (
+                <>
+                  <FaSpinner className="animate-spin mr-2" />
+                  Creating account...
+                </>
+              ) : (
+                'Create Account'
+              )}
+            </button>
           </form>
         )}
-        
-        <div className="text-center mt-4">
-          <p className="text-sm text-gray-400">
+
+        <div className="mt-6 text-center">
+          <p className="text-gray-400">
             Already have an account?{' '}
-            <Link href={priceId ? `/auth/customer-login?priceId=${priceId}` : "/auth/customer-login"} className="text-kaizen-red hover:underline">
+            <Link href="/auth/signin" className="text-blue-400 hover:text-blue-300">
               Sign in
             </Link>
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CustomerRegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-kaizen-black">
+      <div className="animate-spin text-white">
+        <FaSpinner size={30} />
+      </div>
+    </div>}>
+      <RegisterForm />
+    </Suspense>
   );
 } 
