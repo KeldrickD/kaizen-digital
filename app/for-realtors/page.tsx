@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { FaCheck, FaChevronRight, FaHome, FaUsers, FaChartLine } from 'react-icons/fa'
 import Image from 'next/image'
 
+// Updated testimonials and FAQ for real estate page - v2
+
 export default function RealtorPage() {
   return (
     <>
