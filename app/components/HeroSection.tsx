@@ -1,7 +1,6 @@
 "use client"
 
 import React from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 
 const HeroSection = () => {
@@ -60,14 +59,41 @@ const HeroSection = () => {
           <div className="relative">
             <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl p-2 shadow-2xl">
               <div className="rounded-lg overflow-hidden border border-gray-700">
-                <Image 
-                  src="/mockups/realtor-website-preview.jpg" 
-                  alt="Kapstone Real Estate Website Example"
-                  width={600}
-                  height={900}
-                  className="w-full h-auto"
-                  priority
-                />
+                {/* Real Estate Website Mockup */}
+                <div className="bg-white text-black min-h-[600px] relative">
+                  {/* Header */}
+                  <div className="p-4 flex justify-between items-center border-b border-gray-200">
+                    <div className="font-bold text-xl">käpstone</div>
+                    <div className="flex gap-6">
+                      <div>HOME</div>
+                      <div>ABOUT</div>
+                      <div>CONTACT</div>
+                    </div>
+                  </div>
+                  
+                  {/* Hero Content */}
+                  <div className="p-6">
+                    <h2 className="text-4xl font-bold mb-4">Find Your Dream Home</h2>
+                    <p className="mb-4">Explore our listings of beautiful homes in your area.</p>
+                    <button className="bg-red-600 text-white px-6 py-2 rounded">VIEW LISTINGS</button>
+                  </div>
+                  
+                  {/* House Image */}
+                  <div className="bg-gray-200 h-[300px] mt-4 flex items-center justify-center">
+                    <div className="text-center">
+                      <p className="text-gray-500">[House Image]</p>
+                    </div>
+                  </div>
+                  
+                  {/* Agent Info */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4 flex items-center bg-white border-t border-gray-200">
+                    <div className="bg-gray-300 w-16 h-16 rounded-full mr-4"></div>
+                    <div>
+                      <div className="font-bold">John Smith</div>
+                      <div className="text-sm text-gray-600">Real Estate Agent</div>
+                    </div>
+                  </div>
+                </div>
               </div>
               
               {/* Floating stats cards */}
