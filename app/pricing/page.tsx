@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import PricingCard from '@/components/PricingCard';
+import PricingCard from '../components/PricingCard';
 
 export const metadata: Metadata = {
   title: 'Realtor Website Packages | Kaizen Digital Design',
