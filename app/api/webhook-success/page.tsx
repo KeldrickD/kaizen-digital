@@ -15,7 +15,7 @@ export default function SuccessPage() {
       return () => clearTimeout(timer);
     } else {
       // Redirect to Google Form when countdown reaches 0
-      router.push("https://forms.gle/UZ9dJCaGH9YAVdtN9");
+      router.push("https://docs.google.com/forms/d/e/1FAIpQLSdfTwfxqZzoHI2Bp2KfX6ZdVP-awJEd_8swn-uZNyTXig1xMg/viewform?usp=dialog");
     }
   }, [countdown, router]);
 

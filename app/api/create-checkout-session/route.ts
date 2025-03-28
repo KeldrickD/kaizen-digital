@@ -38,7 +38,7 @@ const DEPOSIT_AMOUNTS = {
 };
 
 // Google form URL for client intake after payment
-const CLIENT_INTAKE_FORM_URL = 'https://forms.gle/UZ9dJCaGH9YAVdtN9';
+const CLIENT_INTAKE_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdfTwfxqZzoHI2Bp2KfX6ZdVP-awJEd_8swn-uZNyTXig1xMg/viewform?usp=dialog';
 
 export async function POST(request: Request) {
   try {
