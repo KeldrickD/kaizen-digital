@@ -31,6 +31,9 @@ export default function PricingCard({
   const handlePurchase = async () => {
     setIsLoading(true);
     try {
+      // Debugging
+      console.log(`Sending priceId: ${priceId}, paymentType: ${paymentType}`);
+      
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: {
@@ -39,13 +42,24 @@ export default function PricingCard({
         body: JSON.stringify({
           priceId,
           paymentType,
+          packageType: name, // Add package name for better identification
+          customerEmail: '', // Will be collected by Stripe
+          customerName: '',  // Will be collected by Stripe
         }),
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error creating checkout session');
+      }
+
       const { id } = await response.json();
-      router.push(`/checkout?session_id=${id}`);
+      
+      // Redirect to Stripe Checkout
+      window.location.href = `https://checkout.stripe.com/c/pay/${id}`;
     } catch (error) {
       console.error('Checkout error:', error);
+      alert('There was an error processing your checkout. Please try again.');
     } finally {
       setIsLoading(false);
     }

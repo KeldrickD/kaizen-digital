@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
 
 // Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-02-24.acacia',
 });
 
@@ -11,13 +11,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 type PackageId = 'price_starter' | 'price_business' | 'price_elite' | 'custom';
 type PaymentType = 'full' | 'deposit';
 
-// Price information for standard packages
-const PACKAGE_INFO: Record<string, {
-  name: string;
-  amount: number;
-  description: string;
-  stripeId?: string; // Optional actual Stripe price ID
-}> = {
+// Price information for standard packages - Ensure these match the pricing page
+const PACKAGE_INFO = {
   price_starter: {
     name: 'Starter Site',
     amount: 75000, // $750.00 in cents
@@ -35,15 +30,23 @@ const PACKAGE_INFO: Record<string, {
   }
 };
 
-// Standard deposit amount in cents ($500.00)
-const DEPOSIT_AMOUNT = 50000;
+// Standard deposit amount for each package
+const DEPOSIT_AMOUNTS = {
+  price_starter: 25000,  // $250
+  price_business: 50000, // $500
+  price_elite: 75000,    // $750
+};
 
 // Google form URL for client intake after payment
 const CLIENT_INTAKE_FORM_URL = 'https://forms.gle/UZ9dJCaGH9YAVdtN9';
 
 export async function POST(request: Request) {
   try {
-    const { priceId, customerEmail, customerName, packageType, paymentType = 'full' } = await request.json();
+    const body = await request.json();
+    const { priceId, customerEmail, customerName, packageType, paymentType = 'full' } = body;
+
+    // Debug log
+    console.log('Checkout request:', JSON.stringify(body));
 
     if (!priceId) {
       return NextResponse.json(
@@ -56,8 +59,10 @@ export async function POST(request: Request) {
     const packageInfo = PACKAGE_INFO[priceId as keyof typeof PACKAGE_INFO];
     
     if (!packageInfo) {
+      // Debug more information about the invalid price ID
+      console.error(`Invalid package ID: ${priceId}. Available packages: ${Object.keys(PACKAGE_INFO).join(', ')}`);
       return NextResponse.json(
-        { error: 'Invalid package ID' },
+        { error: `Invalid package ID: ${priceId}` },
         { status: 400 }
       );
     }
@@ -78,6 +83,7 @@ export async function POST(request: Request) {
     
     // Create line items based on payment type
     const lineItems = [];
+    const depositAmount = DEPOSIT_AMOUNTS[priceId as keyof typeof DEPOSIT_AMOUNTS] || 50000;
     
     if (paymentType === 'deposit') {
       // Add deposit as a separate line item
@@ -88,7 +94,7 @@ export async function POST(request: Request) {
             name: `${packageInfo.name} - Initial Deposit`,
             description: 'Initial deposit for website development',
           },
-          unit_amount: DEPOSIT_AMOUNT,
+          unit_amount: depositAmount,
         },
         quantity: 1,
       });
