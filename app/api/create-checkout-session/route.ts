@@ -16,6 +16,7 @@ const PACKAGE_INFO: Record<string, {
   name: string;
   amount: number;
   description: string;
+  stripeId?: string; // Optional actual Stripe price ID
 }> = {
   price_starter: {
     name: 'Starter Site',
@@ -51,12 +52,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get the price from Stripe
-    const price = await stripe.prices.retrieve(priceId);
+    // Get package info from our internal map instead of from Stripe
+    const packageInfo = PACKAGE_INFO[priceId as keyof typeof PACKAGE_INFO];
     
-    if (!price) {
+    if (!packageInfo) {
       return NextResponse.json(
-        { error: 'Invalid price ID' },
+        { error: 'Invalid package ID' },
         { status: 400 }
       );
     }
@@ -84,33 +85,24 @@ export async function POST(request: Request) {
         price_data: {
           currency: 'usd',
           product_data: {
-            name: 'Initial Deposit',
+            name: `${packageInfo.name} - Initial Deposit`,
             description: 'Initial deposit for website development',
           },
           unit_amount: DEPOSIT_AMOUNT,
         },
         quantity: 1,
       });
-      
-      // Add the remaining balance as a separate line item
-      const packageInfo = PACKAGE_INFO[priceId as keyof typeof PACKAGE_INFO];
-      if (packageInfo) {
-        lineItems.push({
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `${packageInfo.name} - Remaining Balance`,
-              description: `Remaining balance for ${packageInfo.name}`,
-            },
-            unit_amount: packageInfo.amount - DEPOSIT_AMOUNT,
-          },
-          quantity: 1,
-        });
-      }
     } else {
-      // Full payment
+      // Full payment - create price data directly
       lineItems.push({
-        price: priceId,
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: packageInfo.name,
+            description: packageInfo.description,
+          },
+          unit_amount: packageInfo.amount,
+        },
         quantity: 1,
       });
     }
