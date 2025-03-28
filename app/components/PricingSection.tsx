@@ -76,9 +76,39 @@ const pricingTiers: PricingTier[] = [
 const PricingSection = () => {
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({})
 
-  const handleCheckout = async (priceId: string) => {
-    // Redirect to registration page with price ID as query parameter
-    window.location.href = `/auth/register?priceId=${priceId}`
+  const handleCheckout = async (priceId: string, packageTitle: string) => {
+    try {
+      // Set loading state for this specific package
+      setIsLoading(prev => ({ ...prev, [priceId]: true }));
+      
+      // Create checkout session directly
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId,
+          packageType: packageTitle
+        }),
+      });
+      
+      const { id: checkoutSessionId, error } = await response.json();
+      
+      if (error) {
+        console.error('Checkout error:', error);
+        alert('Something went wrong. Please try again later.');
+        setIsLoading(prev => ({ ...prev, [priceId]: false }));
+        return;
+      }
+      
+      // Redirect to Stripe checkout
+      window.location.href = `https://checkout.stripe.com/c/pay/${checkoutSessionId}`;
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      alert('Could not initiate checkout. Please try again.');
+      setIsLoading(prev => ({ ...prev, [priceId]: false }));
+    }
   }
 
   return (
@@ -134,7 +164,7 @@ const PricingSection = () => {
 
               <div className="mt-8">
                 <button
-                  onClick={() => handleCheckout(tier.productId)}
+                  onClick={() => handleCheckout(tier.productId, tier.title)}
                   disabled={isLoading[tier.productId]}
                   className={`w-full rounded-md px-4 py-3 flex items-center justify-center space-x-2 transition-colors ${
                     tier.mostPopular
