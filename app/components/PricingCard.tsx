@@ -31,8 +31,19 @@ export default function PricingCard({
   const handlePurchase = async () => {
     setIsLoading(true);
     try {
+      // Map external Stripe IDs to our internal constants if needed
+      let normalizedPriceId = priceId;
+      
+      // Check if this is a Stripe ID and map it to our internal constants
+      if (priceId.startsWith('price_1')) {
+        // This is likely a Stripe price ID, map it to our internal constants
+        if (price === 750) normalizedPriceId = 'price_starter';
+        else if (price === 1500) normalizedPriceId = 'price_business';
+        else if (price === 2500) normalizedPriceId = 'price_elite';
+      }
+      
       // Debugging
-      console.log(`Sending priceId: ${priceId}, paymentType: ${paymentType}`);
+      console.log(`Original priceId: ${priceId}, Normalized: ${normalizedPriceId}, Payment Type: ${paymentType}`);
       
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
@@ -40,11 +51,11 @@ export default function PricingCard({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          priceId,
+          priceId: normalizedPriceId,
           paymentType,
-          packageType: name, // Add package name for better identification
-          customerEmail: '', // Will be collected by Stripe
-          customerName: '',  // Will be collected by Stripe
+          packageType: name,
+          customerEmail: '',
+          customerName: '',
         }),
       });
 
