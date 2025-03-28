@@ -4,7 +4,7 @@ import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 import bcryptjs from 'bcryptjs';
-import { sendCredentialsEmail } from '@/lib/email';
+import { sendCredentialsEmail, sendEmail } from '@/lib/email';
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -256,6 +256,7 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
   try {
     console.log('Processing checkout session completed:', session.id);
     
+    // Basic validation
     if (!session.customer || !session.customer_email) {
       console.error('Missing customer info in checkout session');
       return;
@@ -263,107 +264,88 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
     
     const stripeCustomerId = session.customer as string;
     const customerEmail = session.customer_email;
+    const customerName = session.customer_details?.name || 'New Customer';
+    const customerPhone = session.customer_details?.phone || '';
+    const packageType = session.metadata?.packageType || 'standard';
     
-    console.log(`Checkout completed for email: ${customerEmail}, stripe ID: ${stripeCustomerId}`);
+    console.log(`Payment received for email: ${customerEmail}, stripe ID: ${stripeCustomerId}`);
     
-    // Find or create a customer
-    let customer = await prisma.customer.findFirst({
-      where: { stripeCustomerId },
-      include: { subscriptions: true }
-    });
-    
-    if (!customer) {
-      customer = await prisma.customer.findFirst({
-        where: { email: customerEmail },
-        include: { subscriptions: true }
+    // Record the completed order
+    try {
+      // Store order information - even without user account
+      // Check if we already have this customer in our database
+      let customer = await prisma.customer.findFirst({
+        where: { 
+          OR: [
+            { stripeCustomerId },
+            { email: customerEmail }
+          ]
+        }
       });
       
+      // If no customer exists, create a temporary one to track the order
       if (!customer) {
-        // Create a new customer if they don't exist
-        const nameFromSession = session.customer_details?.name || 'New Customer';
-        
-        // Generate initial password
+        // Generate a temporary password just in case we need it later
         const password = crypto.randomBytes(8).toString('hex');
         const hashedPassword = await bcryptjs.hash(password, 10);
         
         customer = await prisma.customer.create({
           data: {
-            name: nameFromSession,
+            name: customerName,
             email: customerEmail,
             stripeCustomerId,
             passwordHash: hashedPassword,
-          },
-          include: { subscriptions: true }
+            phone: customerPhone,
+          }
         });
         
-        console.log(`Created new customer: ${customer.id} for email: ${customerEmail}`);
-        
-        // Always send credentials for new customers
-        try {
-          await sendCredentialsEmail({
-            to: customerEmail,
-            name: nameFromSession,
-            password,
-            subscriptionType: 'Website Service',
-          });
-          console.log(`Sent credentials email to new customer ${customerEmail}`);
-        } catch (emailError: unknown) {
-          console.error('Error sending email:', emailError);
-          // Continue with the process even if email fails
-          // We don't want to prevent the customer from being created
-          // just because the email failed to send
-        }
-      } else {
-        // Update existing customer with Stripe ID
-        customer = await prisma.customer.update({
-          where: { id: customer.id },
-          data: { stripeCustomerId },
-          include: { subscriptions: true }
-        });
-        
-        console.log(`Updated customer ${customer.id} with Stripe ID: ${stripeCustomerId}`);
+        console.log(`Created new temporary customer: ${customer.id} for email: ${customerEmail}`);
       }
-    }
-    
-    // ALWAYS generate a new password and send credentials after payment
-    // This ensures customers get their login details immediately
-    const password = crypto.randomBytes(8).toString('hex');
-    const hashedPassword = await bcryptjs.hash(password, 10);
-    
-    try {
-      await prisma.customer.update({
-        where: { id: customer.id },
-        data: { passwordHash: hashedPassword }
-      });
       
-      console.log(`Updated password for customer ${customer.id}`);
-    } catch (dbError: unknown) {
-      console.error('Error saving customer to database:', dbError);
-      return new Response(
-        JSON.stringify({ 
-          error: dbError instanceof Error ? dbError.message : 'Database error',
-          success: false 
-        }),
-        { status: 500 }
-      );
+      // Record the payment/order information
+      const paymentData = {
+        customerId: customer.id,
+        stripeSessionId: session.id,
+        amount: session.amount_total || 0,
+        status: 'paid',
+        packageType,
+        paymentDate: new Date(),
+      };
+      
+      console.log(`Recorded payment data:`, paymentData);
+      
+      // Send notification email to admin about new order
+      try {
+        await sendAdminNotificationEmail({
+          customerName,
+          customerEmail,
+          customerPhone,
+          packageType,
+          amount: (session.amount_total || 0) / 100, // Convert to dollars
+          sessionId: session.id,
+        });
+        console.log(`Sent admin notification email for order from ${customerEmail}`);
+      } catch (emailError) {
+        console.error('Error sending admin notification email:', emailError);
+      }
+      
+      // Send confirmation email to customer
+      try {
+        await sendOrderConfirmationEmail({
+          to: customerEmail,
+          name: customerName,
+          packageType,
+          amount: (session.amount_total || 0) / 100, // Convert to dollars
+          orderNumber: session.id.substring(session.id.length - 8), // Last 8 chars
+          nextSteps: "Please complete the intake form to share your requirements and preferences. We'll start working on your project right away!",
+        });
+        console.log(`Sent order confirmation email to ${customerEmail}`);
+      } catch (emailError) {
+        console.error('Error sending customer confirmation email:', emailError);
+      }
+    } catch (error) {
+      console.error('Error processing payment record:', error);
     }
-    
-    // Send login credentials via email - always attempt this for all customers
-    try {
-      await sendCredentialsEmail({
-        to: customerEmail,
-        name: customer.name,
-        password,
-        subscriptionType: customer.subscriptions?.[0]?.planName || 'Website Service',
-      });
-      console.log(`Sent credentials email to ${customerEmail} after checkout`);
-    } catch (emailError: unknown) {
-      console.error('Error sending credentials email:', emailError);
-      // Continue with the process even if email fails
-    }
-    
-    // If subscription was purchased, it will be handled by the subscription.created event
-    console.log('Checkout session processing completed for customer:', customer.id);
   } catch (error: unknown) {
     console.error('Error handling stripe webhook:', error);
     return new Response(
@@ -374,4 +356,147 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
       { status: 500 }
     );
   }
+}
+
+// New email function for admin notifications
+async function sendAdminNotificationEmail({ 
+  customerName, 
+  customerEmail, 
+  customerPhone, 
+  packageType, 
+  amount, 
+  sessionId 
+}: {
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  packageType: string;
+  amount: number;
+  sessionId: string;
+}) {
+  const adminEmail = process.env.ADMIN_EMAIL || 'your-admin-email@example.com';
+  
+  const subject = `New Website Order: ${packageType}`;
+  const textContent = `
+    New order received:
+    
+    Package: ${packageType}
+    Amount: $${amount.toFixed(2)}
+    
+    Customer Details:
+    Name: ${customerName}
+    Email: ${customerEmail}
+    Phone: ${customerPhone}
+    
+    Order ID: ${sessionId}
+    
+    The customer has been redirected to the intake form.
+  `;
+  
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background-color: #000; padding: 20px; text-align: center;">
+        <h1 style="color: #e61919; margin: 0;">New Website Order</h1>
+      </div>
+      <div style="padding: 20px; border: 1px solid #eee; background-color: #fff;">
+        <h2>${packageType} Package</h2>
+        <p><strong>Amount:</strong> $${amount.toFixed(2)}</p>
+        
+        <h3>Customer Details:</h3>
+        <p><strong>Name:</strong> ${customerName}</p>
+        <p><strong>Email:</strong> ${customerEmail}</p>
+        <p><strong>Phone:</strong> ${customerPhone}</p>
+        
+        <p><strong>Order ID:</strong> ${sessionId}</p>
+        
+        <p>The customer has been redirected to the intake form.</p>
+      </div>
+    </div>
+  `;
+  
+  // Use email sending function with required html property
+  await sendEmail({
+    to: adminEmail,
+    subject,
+    text: textContent,
+    html: htmlContent,
+  });
+}
+
+// New email function for order confirmations
+async function sendOrderConfirmationEmail({ 
+  to, 
+  name, 
+  packageType, 
+  amount, 
+  orderNumber,
+  nextSteps
+}: {
+  to: string;
+  name: string;
+  packageType: string;
+  amount: number;
+  orderNumber: string;
+  nextSteps: string;
+}) {
+  const subject = `Your Website Order Confirmation (#${orderNumber})`;
+  const textContent = `
+    Hello ${name},
+    
+    Thank you for your order! We're excited to work on your new website.
+    
+    Order Summary:
+    Package: ${packageType}
+    Amount: $${amount.toFixed(2)}
+    Order #: ${orderNumber}
+    
+    Next Steps:
+    ${nextSteps}
+    
+    If you have any questions, please contact us at support@kaizendigitaldesign.com.
+    
+    Best regards,
+    The Kaizen Digital Design Team
+  `;
+  
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background-color: #000; padding: 20px; text-align: center;">
+        <h1 style="color: #e61919; margin: 0;">Kaizen Digital Design</h1>
+      </div>
+      <div style="padding: 20px; border: 1px solid #eee; background-color: #fff;">
+        <h2>Order Confirmation #${orderNumber}</h2>
+        <p>Hello ${name},</p>
+        <p>Thank you for your order! We're excited to work on your new website.</p>
+        
+        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 4px; margin: 20px 0;">
+          <h3 style="margin-top: 0;">Order Summary:</h3>
+          <p><strong>Package:</strong> ${packageType}</p>
+          <p><strong>Amount:</strong> $${amount.toFixed(2)}</p>
+          <p><strong>Order #:</strong> ${orderNumber}</p>
+        </div>
+        
+        <div style="margin: 20px 0; padding: 15px; background-color: #f7f7f7; border-left: 4px solid #e61919;">
+          <h3 style="margin-top: 0;">Next Steps:</h3>
+          <p>${nextSteps}</p>
+        </div>
+        
+        <p>If you have any questions, please contact us at support@kaizendigitaldesign.com.</p>
+        
+        <p>Best regards,<br>
+        The Kaizen Digital Design Team</p>
+      </div>
+      <div style="background-color: #f5f5f5; padding: 15px; text-align: center; font-size: 12px; color: #666;">
+        <p>© ${new Date().getFullYear()} Kaizen Digital Design. All rights reserved.</p>
+      </div>
+    </div>
+  `;
+  
+  // Use email sending function with required html property
+  await sendEmail({
+    to,
+    subject,
+    text: textContent,
+    html: htmlContent,
+  });
 } 

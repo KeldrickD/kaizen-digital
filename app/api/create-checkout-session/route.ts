@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../lib/auth';
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -39,12 +37,12 @@ const PACKAGE_INFO: Record<string, {
 // Standard deposit amount in cents ($500.00)
 const DEPOSIT_AMOUNT = 50000;
 
+// Google form URL for client intake after payment
+const CLIENT_INTAKE_FORM_URL = 'https://forms.gle/YourGoogleFormLink';
+
 export async function POST(request: Request) {
   try {
-    // Get the session to check if user is authenticated
-    const session = await getServerSession(authOptions);
-
-    const { priceId, customerId, customerEmail } = await request.json();
+    const { priceId, customerEmail, customerName, packageType } = await request.json();
 
     if (!priceId) {
       return NextResponse.json(
@@ -63,69 +61,41 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get or create the customer in Stripe
-    let stripeCustomerId: string;
-    
-    // Use the user's information from the session if available
-    const email = customerEmail || session?.user?.email;
-    const userId = customerId || session?.user?.id;
-    
-    if (!email) {
-      return NextResponse.json(
-        { error: 'Customer email is required' },
-        { status: 400 }
-      );
-    }
-
-    // Check if the customer already exists in our database
-    const existingCustomer = userId
-      ? await prisma.customer.findUnique({
-          where: { id: userId },
-        })
-      : await prisma.customer.findFirst({
-          where: { email },
-        });
-
-    if (existingCustomer?.stripeCustomerId) {
-      // Use existing Stripe customer
-      stripeCustomerId = existingCustomer.stripeCustomerId;
-    } else {
-      // Create a new Stripe customer
-      const customer = await stripe.customers.create({
-        email,
-        name: existingCustomer?.name || 'New Customer',
-      });
-      
-      stripeCustomerId = customer.id;
-      
-      // Update our database with the Stripe customer ID if the user exists
-      if (existingCustomer) {
-        await prisma.customer.update({
-          where: { id: existingCustomer.id },
-          data: { stripeCustomerId },
-        });
+    // Create a new Stripe customer without requiring an account
+    const customer = await stripe.customers.create({
+      email: customerEmail || '',
+      name: customerName || 'New Customer',
+      metadata: {
+        packageType: packageType || 'standard'
       }
-    }
-
+    });
+    
+    console.log(`Created Stripe customer: ${customer.id} for checkout`);
+    
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     
-    // Create the checkout session
+    // Create the checkout session with redirect to intake form
     const checkoutSession = await stripe.checkout.sessions.create({
-      customer: stripeCustomerId,
+      customer: customer.id,
       line_items: [
         {
           price: priceId,
           quantity: 1,
         },
       ],
-      mode: 'subscription',
+      mode: 'payment', // Changed from subscription to one-time payment
       payment_method_types: ['card'],
-      billing_address_collection: 'auto',
+      billing_address_collection: 'required',
+      phone_number_collection: {
+        enabled: true,
+      },
+      customer_email: customerEmail, // Fallback if customer creation failed
       allow_promotion_codes: true,
-      success_url: `${baseUrl}/api/webhook-success`,
+      success_url: `${CLIENT_INTAKE_FORM_URL}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/pricing`,
       metadata: {
-        userId: existingCustomer?.id || '',
+        packageType: packageType || '',
+        source: 'website_direct',
       },
     });
 
