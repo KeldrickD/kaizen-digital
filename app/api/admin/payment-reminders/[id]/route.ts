@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { NextRequest } from 'next/server';
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
   try {
     const { status } = await request.json();
     const reminder = await prisma.paymentReminder.update({
       where: {
-        id: params.id,
+        id: context.params.id,
       },
       data: {
         status,
