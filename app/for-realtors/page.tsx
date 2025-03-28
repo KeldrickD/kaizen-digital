@@ -211,40 +211,33 @@ function PricingSection() {
       else if (tier.price === '$1,500') priceId = 'price_business';
       else if (tier.price === '$2,500') priceId = 'price_elite';
       
-      console.log(`For Realtors: Selected ${tier.title}, mapped to ${priceId}`);
+      // Create a form element
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/api/create-checkout-session';
       
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceId,
-          paymentType: 'deposit', // Default to deposit for this page
-          packageType: tier.title,
-          customerEmail: '',
-          customerName: '',
-          mode: 'direct', // Signal to use direct URL provided by Stripe
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error creating checkout session');
-      }
-
-      const { url } = await response.json();
+      // Add hidden fields
+      const addHiddenField = (name: string, value: string) => {
+        const field = document.createElement('input');
+        field.type = 'hidden';
+        field.name = name;
+        field.value = value;
+        form.appendChild(field);
+      };
       
-      // Redirect directly to the URL provided by Stripe
-      if (url) {
-        window.location.href = url;
-      } else {
-        throw new Error('No checkout URL returned from API');
-      }
+      addHiddenField('priceId', priceId);
+      addHiddenField('paymentType', 'deposit'); // Default to deposit for this page
+      addHiddenField('packageType', tier.title);
+      addHiddenField('mode', 'direct');
+      
+      // Add the form to the document and submit it
+      document.body.appendChild(form);
+      form.submit();
+      
+      // No need to handle redirect - the form submission will handle it
     } catch (error) {
       console.error('Checkout error:', error);
       alert('There was an error processing your checkout. Please try again.');
-    } finally {
       setIsLoading({...isLoading, [tier.title]: false});
     }
   }

@@ -30,6 +30,7 @@ export default function PricingCard({
 
   const handlePurchase = async () => {
     setIsLoading(true);
+    
     try {
       // Map external Stripe IDs to our internal constants if needed
       let normalizedPriceId = '';
@@ -40,41 +41,33 @@ export default function PricingCard({
       else if (price === 2500) normalizedPriceId = 'price_elite';
       else normalizedPriceId = priceId; // Use original as fallback
       
-      // Debugging
-      console.log(`Original priceId: ${priceId}, Normalized: ${normalizedPriceId}, Payment Type: ${paymentType}`);
+      // Create a form element
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/api/create-checkout-session';
       
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceId: normalizedPriceId,
-          paymentType,
-          packageType: name,
-          customerEmail: '',
-          customerName: '',
-          mode: 'direct', // Signal to use direct URL provided by Stripe
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error creating checkout session');
-      }
-
-      const { url } = await response.json();
+      // Add hidden fields
+      const addHiddenField = (name: string, value: string) => {
+        const field = document.createElement('input');
+        field.type = 'hidden';
+        field.name = name;
+        field.value = value;
+        form.appendChild(field);
+      };
       
-      // Redirect directly to the URL provided by Stripe
-      if (url) {
-        window.location.href = url;
-      } else {
-        throw new Error('No checkout URL returned from API');
-      }
+      addHiddenField('priceId', normalizedPriceId);
+      addHiddenField('paymentType', paymentType);
+      addHiddenField('packageType', name);
+      addHiddenField('mode', 'direct');
+      
+      // Add the form to the document and submit it
+      document.body.appendChild(form);
+      form.submit();
+      
+      // No need to handle redirect - the form submission will handle it
     } catch (error) {
       console.error('Checkout error:', error);
       alert('There was an error processing your checkout. Please try again.');
-    } finally {
       setIsLoading(false);
     }
   };

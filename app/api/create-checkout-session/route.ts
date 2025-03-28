@@ -42,7 +42,22 @@ const CLIENT_INTAKE_FORM_URL = 'https://forms.gle/UZ9dJCaGH9YAVdtN9';
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    let body;
+    const contentType = request.headers.get('content-type') || '';
+    
+    // Parse the request body based on content type
+    if (contentType.includes('application/json')) {
+      body = await request.json();
+    } else if (contentType.includes('application/x-www-form-urlencoded')) {
+      const formData = await request.formData();
+      body = Object.fromEntries(formData);
+    } else {
+      return NextResponse.json(
+        { error: 'Unsupported content type' },
+        { status: 400 }
+      );
+    }
+    
     const { priceId, customerEmail, customerName, packageType, paymentType = 'full', mode = 'default' } = body;
 
     // Debug log
@@ -152,12 +167,16 @@ export async function POST(request: Request) {
       },
     });
 
-    // Return different response format based on mode
-    if (mode === 'direct') {
-      return NextResponse.json({ url: checkoutSession.url });
-    } else {
-      return NextResponse.json({ id: checkoutSession.id });
-    }
+    // If direct mode is requested and we have a URL, perform a 302 redirect
+    if (mode === 'direct' && checkoutSession.url) {
+      return NextResponse.redirect(checkoutSession.url, { status: 302 });
+    } 
+    
+    // Otherwise return the session ID (for compatibility with older code)
+    return NextResponse.json({ 
+      id: checkoutSession.id,
+      url: checkoutSession.url
+    });
   } catch (error: any) {
     console.error('Error creating checkout session:', error);
     
