@@ -5,10 +5,13 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { FaCheck, FaChevronRight, FaHome, FaUsers, FaChartLine } from 'react-icons/fa'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 
 // Updated testimonials and FAQ for real estate page - v2
 
 export default function RealtorPage() {
+  const router = useRouter()
+
   return (
     <>
       <Head>
@@ -142,6 +145,8 @@ function FeatureCard({ title, description, icon }: { title: string; description:
 }
 
 function PricingSection() {
+  const router = useRouter()
+
   const pricingTiers = [
     {
       title: 'The Agent Brand Starter',
@@ -157,7 +162,7 @@ function PricingSection() {
       ],
       mostPopular: false,
       icon: <FaHome className="text-3xl text-red-500 mb-4" />,
-      cta: 'Start With Deposit'
+      cta: 'Get Started with $250'
     },
     {
       title: 'The Growth Agent Package',
@@ -173,7 +178,7 @@ function PricingSection() {
       ],
       mostPopular: true,
       icon: <FaChartLine className="text-3xl text-red-500 mb-4" />,
-      cta: 'Book My Build Week'
+      cta: 'Get Started with $500'
     },
     {
       title: 'The Top Producer Bundle',
@@ -189,7 +194,7 @@ function PricingSection() {
       ],
       mostPopular: false,
       icon: <FaUsers className="text-3xl text-red-500 mb-4" />,
-      cta: 'Claim My Spot'
+      cta: 'Get Started with $750'
     }
   ];
 
@@ -229,8 +234,8 @@ function PricingSection() {
 
       const { id } = await response.json();
       
-      // Redirect to Stripe Checkout
-      window.location.href = `https://checkout.stripe.com/c/pay/${id}`;
+      // Redirect using router instead of window.location
+      router.push(`/api/checkout-redirect?session_id=${id}`);
     } catch (error) {
       console.error('Checkout error:', error);
       alert('There was an error processing your checkout. Please try again.');

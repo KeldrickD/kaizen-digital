@@ -65,7 +65,10 @@ export default function PricingCard({
       const { id } = await response.json();
       
       // Redirect to Stripe Checkout
-      window.location.href = `https://checkout.stripe.com/c/pay/${id}`;
+      // window.location.href = `https://checkout.stripe.com/c/pay/${id}`;
+
+      // Use the Stripe session ID with a proper redirect
+      router.push(`/api/checkout-redirect?session_id=${id}`);
     } catch (error) {
       console.error('Checkout error:', error);
       alert('There was an error processing your checkout. Please try again.');
