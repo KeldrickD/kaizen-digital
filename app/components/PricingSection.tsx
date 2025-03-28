@@ -75,39 +75,54 @@ const pricingTiers: PricingTier[] = [
 
 const PricingSection = () => {
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({})
+  const [paymentTypes, setPaymentTypes] = useState<Record<string, 'deposit' | 'full'>>({
+    'The Agent Brand Starter': 'deposit',
+    'The Growth Agent Package': 'deposit',
+    'The Top Producer Bundle': 'deposit'
+  })
 
-  const handleCheckout = async (priceId: string, packageTitle: string) => {
+  const handlePaymentTypeChange = (tierTitle: string, type: 'deposit' | 'full') => {
+    setPaymentTypes({...paymentTypes, [tierTitle]: type})
+  }
+
+  const handleCheckout = async (tier: PricingTier) => {
     try {
       // Set loading state for this specific package
-      setIsLoading(prev => ({ ...prev, [priceId]: true }));
+      setIsLoading(prev => ({ ...prev, [tier.productId]: true }));
       
-      // Create checkout session directly
-      const response = await fetch('/api/create-checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceId,
-          packageType: packageTitle
-        }),
-      });
+      // Map the tier to internal price constants
+      let priceId = '';
+      if (tier.price === 750) priceId = 'price_starter';
+      else if (tier.price === 1500) priceId = 'price_business';
+      else if (tier.price === 2500) priceId = 'price_elite';
+      else priceId = tier.productId; // Use original as fallback
       
-      const { id: checkoutSessionId, error } = await response.json();
+      // Create a form element
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/api/create-checkout-session';
       
-      if (error) {
-        console.error('Checkout error:', error);
-        alert('Something went wrong. Please try again later.');
-        setIsLoading(prev => ({ ...prev, [priceId]: false }));
-        return;
-      }
+      // Add hidden fields
+      const addHiddenField = (name: string, value: string) => {
+        const field = document.createElement('input');
+        field.type = 'hidden';
+        field.name = name;
+        field.value = value;
+        form.appendChild(field);
+      };
       
-      // Redirect to Stripe checkout
-      window.location.href = `https://checkout.stripe.com/c/pay/${checkoutSessionId}`;
+      addHiddenField('priceId', priceId);
+      addHiddenField('paymentType', paymentTypes[tier.title]);
+      addHiddenField('packageType', tier.title);
+      addHiddenField('mode', 'direct');
+      
+      // Add the form to the document and submit it
+      document.body.appendChild(form);
+      form.submit();
     } catch (error) {
       console.error('Error creating checkout session:', error);
       alert('Could not initiate checkout. Please try again.');
-      setIsLoading(prev => ({ ...prev, [priceId]: false }));
+      setIsLoading(prev => ({ ...prev, [tier.productId]: false }));
     }
   }
 
@@ -162,9 +177,34 @@ const PricingSection = () => {
                 ))}
               </ul>
 
-              <div className="mt-8">
+              <div className="mt-5 mb-4">
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="deposit"
+                      checked={paymentTypes[tier.title] === 'deposit'}
+                      onChange={() => handlePaymentTypeChange(tier.title, 'deposit')}
+                      className="h-4 w-4 text-red-500 focus:ring-red-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-300">Start with ${tier.deposit} deposit</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="full"
+                      checked={paymentTypes[tier.title] === 'full'}
+                      onChange={() => handlePaymentTypeChange(tier.title, 'full')}
+                      className="h-4 w-4 text-red-500 focus:ring-red-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-300">Pay full amount (${tier.price})</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="mt-4">
                 <button
-                  onClick={() => handleCheckout(tier.productId, tier.title)}
+                  onClick={() => handleCheckout(tier)}
                   disabled={isLoading[tier.productId]}
                   className={`w-full rounded-md px-4 py-3 flex items-center justify-center space-x-2 transition-colors ${
                     tier.mostPopular
@@ -172,7 +212,7 @@ const PricingSection = () => {
                       : 'bg-gray-800 hover:bg-gray-700 text-white'
                   }`}
                 >
-                  <span>{isLoading[tier.productId] ? 'Processing...' : `Start with $${tier.deposit} deposit`}</span>
+                  <span>{isLoading[tier.productId] ? 'Processing...' : paymentTypes[tier.title] === 'deposit' ? `Start with $${tier.deposit} deposit` : `Pay $${tier.price}`}</span>
                   <FaChevronRight size={12} />
                 </button>
               </div>
