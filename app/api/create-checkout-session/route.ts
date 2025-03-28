@@ -174,7 +174,7 @@ export async function POST(request: Request) {
       customer_email: customerEmail, // Fallback if customer creation failed
       allow_promotion_codes: true,
       success_url: `${CLIENT_INTAKE_FORM_URL}?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/pricing`,
+      cancel_url: `${baseUrl}/`,
       metadata: {
         packageType: packageType || '',
         paymentType,
