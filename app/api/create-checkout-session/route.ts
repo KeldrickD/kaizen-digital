@@ -38,7 +38,7 @@ const PACKAGE_INFO: Record<string, {
 const DEPOSIT_AMOUNT = 50000;
 
 // Google form URL for client intake after payment
-const CLIENT_INTAKE_FORM_URL = 'https://forms.gle/YourGoogleFormLink';
+const CLIENT_INTAKE_FORM_URL = 'https://forms.gle/UZ9dJCaGH9YAVdtN9';
 
 export async function POST(request: Request) {
   try {
