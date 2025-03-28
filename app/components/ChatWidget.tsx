@@ -1042,6 +1042,19 @@ const ChatWidget = () => {
     setMessages(prevMessages => [...prevMessages, message]);
   };
 
+  // Function to handle sending messages from quick replies
+  const handleSendMessage = (text: string) => {
+    const userMessage: Message = {
+      id: uuidv4(),
+      text,
+      sender: 'user',
+      timestamp: new Date()
+    };
+    
+    setMessages(prevMessages => [...prevMessages, userMessage]);
+    processUserMessage(text);
+  };
+
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {/* Chat Button */}
