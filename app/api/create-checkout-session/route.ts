@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
 
-// Initialize Stripe
+// Initialize Stripe with production key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-02-24.acacia',
 });
@@ -16,17 +16,23 @@ const PACKAGE_INFO = {
   price_starter: {
     name: 'Starter Site',
     amount: 75000, // $750.00 in cents
-    description: '3-page professional site with mobile-friendly design'
+    description: '3-page professional site with mobile-friendly design',
+    // Production Stripe price ID (can be added when available)
+    stripePriceId: process.env.STRIPE_STARTER_PRICE_ID || ''
   },
   price_business: {
     name: 'Business Pro',
     amount: 150000, // $1,500.00 in cents
-    description: '5-page website with lead capture form & custom branding'
+    description: '5-page website with lead capture form & custom branding',
+    // Production Stripe price ID (can be added when available)
+    stripePriceId: process.env.STRIPE_BUSINESS_PRICE_ID || ''
   },
   price_elite: {
     name: 'Elite Custom Site',
     amount: 250000, // $2,500.00 in cents
-    description: 'Fully custom design with e-commerce or interactive elements'
+    description: 'Fully custom design with e-commerce or interactive elements',
+    // Production Stripe price ID (can be added when available)
+    stripePriceId: process.env.STRIPE_ELITE_PRICE_ID || ''
   }
 };
 
@@ -119,7 +125,7 @@ export async function POST(request: Request) {
     const depositAmount = DEPOSIT_AMOUNTS[priceId as keyof typeof DEPOSIT_AMOUNTS] || 50000;
     
     if (paymentType === 'deposit') {
-      // Add deposit as a separate line item
+      // For deposits, we always create price data dynamically since deposits are partial payments
       lineItems.push({
         price_data: {
           currency: 'usd',
@@ -132,18 +138,27 @@ export async function POST(request: Request) {
         quantity: 1,
       });
     } else {
-      // Full payment - create price data directly
-      lineItems.push({
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: packageInfo.name,
-            description: packageInfo.description,
+      // Full payment - If a Stripe price ID exists, use it, otherwise create dynamically
+      if (packageInfo.stripePriceId) {
+        // Use existing price ID in production
+        lineItems.push({
+          price: packageInfo.stripePriceId,
+          quantity: 1,
+        });
+      } else {
+        // Create price data dynamically as fallback
+        lineItems.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: packageInfo.name,
+              description: packageInfo.description,
+            },
+            unit_amount: packageInfo.amount,
           },
-          unit_amount: packageInfo.amount,
-        },
-        quantity: 1,
-      });
+          quantity: 1,
+        });
+      }
     }
     
     // Create the checkout session with redirect to intake form
