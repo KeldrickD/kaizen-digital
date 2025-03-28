@@ -32,15 +32,13 @@ export default function PricingCard({
     setIsLoading(true);
     try {
       // Map external Stripe IDs to our internal constants if needed
-      let normalizedPriceId = priceId;
+      let normalizedPriceId = '';
       
-      // Check if this is a Stripe ID and map it to our internal constants
-      if (priceId.startsWith('price_1')) {
-        // This is likely a Stripe price ID, map it to our internal constants
-        if (price === 750) normalizedPriceId = 'price_starter';
-        else if (price === 1500) normalizedPriceId = 'price_business';
-        else if (price === 2500) normalizedPriceId = 'price_elite';
-      }
+      // First try to normalize by price, the most reliable indicator
+      if (price === 750) normalizedPriceId = 'price_starter';
+      else if (price === 1500) normalizedPriceId = 'price_business';
+      else if (price === 2500) normalizedPriceId = 'price_elite';
+      else normalizedPriceId = priceId; // Use original as fallback
       
       // Debugging
       console.log(`Original priceId: ${priceId}, Normalized: ${normalizedPriceId}, Payment Type: ${paymentType}`);

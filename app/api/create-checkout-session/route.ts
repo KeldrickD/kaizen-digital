@@ -56,7 +56,25 @@ export async function POST(request: Request) {
     }
 
     // Get package info from our internal map instead of from Stripe
-    const packageInfo = PACKAGE_INFO[priceId as keyof typeof PACKAGE_INFO];
+    let packageInfo = PACKAGE_INFO[priceId as keyof typeof PACKAGE_INFO];
+    
+    // If package info not found, try to infer from the package name/type
+    if (!packageInfo && packageType) {
+      const packageTypeLower = packageType.toLowerCase();
+      
+      if (packageTypeLower.includes('starter') || packageTypeLower.includes('agent brand')) {
+        packageInfo = PACKAGE_INFO.price_starter;
+        console.log(`Inferred package from name '${packageType}' -> price_starter`);
+      }
+      else if (packageTypeLower.includes('business') || packageTypeLower.includes('growth')) {
+        packageInfo = PACKAGE_INFO.price_business;
+        console.log(`Inferred package from name '${packageType}' -> price_business`);
+      }
+      else if (packageTypeLower.includes('elite') || packageTypeLower.includes('producer')) {
+        packageInfo = PACKAGE_INFO.price_elite;
+        console.log(`Inferred package from name '${packageType}' -> price_elite`);
+      }
+    }
     
     if (!packageInfo) {
       // Debug more information about the invalid price ID

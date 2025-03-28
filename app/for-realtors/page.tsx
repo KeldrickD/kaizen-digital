@@ -195,9 +195,48 @@ function PricingSection() {
 
   const [isLoading, setIsLoading] = React.useState<Record<string, boolean>>({})
 
-  const handleCheckout = async (deposit: string) => {
-    // TODO: Implement checkout logic
-    window.location.href = `/auth/register?priceId=${deposit.replace('$', '')}`
+  const handleCheckout = async (tier: any) => {
+    // Set loading state for this specific tier
+    setIsLoading({...isLoading, [tier.title]: true});
+    
+    try {
+      // Map the tier to internal price constants
+      let priceId = '';
+      if (tier.price === '$750') priceId = 'price_starter';
+      else if (tier.price === '$1,500') priceId = 'price_business';
+      else if (tier.price === '$2,500') priceId = 'price_elite';
+      
+      console.log(`For Realtors: Selected ${tier.title}, mapped to ${priceId}`);
+      
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId,
+          paymentType: 'deposit', // Default to deposit for this page
+          packageType: tier.title,
+          customerEmail: '',
+          customerName: '',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error creating checkout session');
+      }
+
+      const { id } = await response.json();
+      
+      // Redirect to Stripe Checkout
+      window.location.href = `https://checkout.stripe.com/c/pay/${id}`;
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('There was an error processing your checkout. Please try again.');
+    } finally {
+      setIsLoading({...isLoading, [tier.title]: false});
+    }
   }
 
   return (
@@ -253,7 +292,7 @@ function PricingSection() {
 
               <div className="mt-8">
                 <button
-                  onClick={() => handleCheckout(tier.deposit)}
+                  onClick={() => handleCheckout(tier)}
                   disabled={isLoading[tier.title]}
                   className={`w-full rounded-md px-4 py-3 flex items-center justify-center space-x-2 transition-colors ${
                     tier.mostPopular
