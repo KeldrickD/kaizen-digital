@@ -20,7 +20,7 @@ const pricingPlans = [
       'Basic SEO Setup',
       '5 Business Days Delivery'
     ],
-    priceId: 'price_1R7YRKI6sCkY7Hh0tgNMir2h',
+    priceId: 'price_starter',
     depositAmount: 250,
     icon: (
       <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -43,7 +43,7 @@ const pricingPlans = [
       'Analytics Integration',
       '7 Business Days Delivery'
     ],
-    priceId: 'price_1R7YRKI6sCkY7Hh0NUQJSZha',
+    priceId: 'price_business',
     depositAmount: 500,
     isPopular: true,
     icon: (
@@ -70,7 +70,7 @@ const pricingPlans = [
       'Priority Support',
       '10 Business Days Delivery'
     ],
-    priceId: 'price_1R7YRKI6sCkY7Hh09sArnYS2',
+    priceId: 'price_elite',
     depositAmount: 750,
     icon: (
       <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
