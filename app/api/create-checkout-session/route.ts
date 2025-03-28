@@ -43,7 +43,7 @@ const CLIENT_INTAKE_FORM_URL = 'https://forms.gle/UZ9dJCaGH9YAVdtN9';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { priceId, customerEmail, customerName, packageType, paymentType = 'full' } = body;
+    const { priceId, customerEmail, customerName, packageType, paymentType = 'full', mode = 'default' } = body;
 
     // Debug log
     console.log('Checkout request:', JSON.stringify(body));
@@ -152,7 +152,12 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ id: checkoutSession.id });
+    // Return different response format based on mode
+    if (mode === 'direct') {
+      return NextResponse.json({ url: checkoutSession.url });
+    } else {
+      return NextResponse.json({ id: checkoutSession.id });
+    }
   } catch (error: any) {
     console.error('Error creating checkout session:', error);
     

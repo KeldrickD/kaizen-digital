@@ -224,6 +224,7 @@ function PricingSection() {
           packageType: tier.title,
           customerEmail: '',
           customerName: '',
+          mode: 'direct', // Signal to use direct URL provided by Stripe
         }),
       });
 
@@ -232,10 +233,14 @@ function PricingSection() {
         throw new Error(errorData.error || 'Error creating checkout session');
       }
 
-      const { id } = await response.json();
+      const { url } = await response.json();
       
-      // Redirect using router instead of window.location
-      router.push(`/api/checkout-redirect?session_id=${id}`);
+      // Redirect directly to the URL provided by Stripe
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL returned from API');
+      }
     } catch (error) {
       console.error('Checkout error:', error);
       alert('There was an error processing your checkout. Please try again.');
