@@ -99,7 +99,7 @@ export async function sendCredentialsEmail({
   subscriptionType: string;
 }) {
   const loginUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://kaizendigitaldesign.com'}/auth/customer-login?callbackUrl=/dashboard`;
-  const googleFormUrl = "https://forms.gle/WidHZytgNi5vNopR7";
+  const googleFormUrl = "https://docs.google.com/forms/d/e/1FAIpQLSdfTwfxqZzoHI2Bp2KfX6ZdVP-awJEd_8swn-uZNyTXig1xMg/viewform?usp=dialog";
 
   return sendEmail({
     to,
