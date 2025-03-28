@@ -48,7 +48,7 @@ function ThankYouContent() {
         if (prev <= 1) {
           clearInterval(timer)
           // Redirect to your Google Form
-          window.location.href = 'https://forms.gle/KQGNwyWqHyVT9Bd16'
+          window.location.href = 'https://forms.gle/WidHZytgNi5vNopR7'
           return 0
         }
         return prev - 1
@@ -124,7 +124,7 @@ function ThankYouContent() {
               <p className="text-gray-400">
                 If you're not redirected automatically, 
                 <a 
-                  href="https://forms.gle/KQGNwyWqHyVT9Bd16" 
+                  href="https://forms.gle/WidHZytgNi5vNopR7" 
                   className="text-kaizen-red hover:underline ml-1"
                 >
                   click here
