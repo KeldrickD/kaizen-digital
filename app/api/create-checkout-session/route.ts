@@ -42,7 +42,7 @@ const CLIENT_INTAKE_FORM_URL = 'https://forms.gle/UZ9dJCaGH9YAVdtN9';
 
 export async function POST(request: Request) {
   try {
-    const { priceId, customerEmail, customerName, packageType } = await request.json();
+    const { priceId, customerEmail, customerName, packageType, paymentType = 'full' } = await request.json();
 
     if (!priceId) {
       return NextResponse.json(
@@ -66,7 +66,8 @@ export async function POST(request: Request) {
       email: customerEmail || '',
       name: customerName || 'New Customer',
       metadata: {
-        packageType: packageType || 'standard'
+        packageType: packageType || 'standard',
+        paymentType
       }
     });
     
@@ -74,16 +75,51 @@ export async function POST(request: Request) {
     
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     
+    // Create line items based on payment type
+    const lineItems = [];
+    
+    if (paymentType === 'deposit') {
+      // Add deposit as a separate line item
+      lineItems.push({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: 'Initial Deposit',
+            description: 'Initial deposit for website development',
+          },
+          unit_amount: DEPOSIT_AMOUNT,
+        },
+        quantity: 1,
+      });
+      
+      // Add the remaining balance as a separate line item
+      const packageInfo = PACKAGE_INFO[priceId as keyof typeof PACKAGE_INFO];
+      if (packageInfo) {
+        lineItems.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `${packageInfo.name} - Remaining Balance`,
+              description: `Remaining balance for ${packageInfo.name}`,
+            },
+            unit_amount: packageInfo.amount - DEPOSIT_AMOUNT,
+          },
+          quantity: 1,
+        });
+      }
+    } else {
+      // Full payment
+      lineItems.push({
+        price: priceId,
+        quantity: 1,
+      });
+    }
+    
     // Create the checkout session with redirect to intake form
     const checkoutSession = await stripe.checkout.sessions.create({
       customer: customer.id,
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: 'payment', // Changed from subscription to one-time payment
+      line_items: lineItems,
+      mode: 'payment',
       payment_method_types: ['card'],
       billing_address_collection: 'required',
       phone_number_collection: {
@@ -95,6 +131,7 @@ export async function POST(request: Request) {
       cancel_url: `${baseUrl}/pricing`,
       metadata: {
         packageType: packageType || '',
+        paymentType,
         source: 'website_direct',
       },
     });

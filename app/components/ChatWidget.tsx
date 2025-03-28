@@ -76,6 +76,37 @@ const ChatWidget = () => {
     { name: 'Elite Custom Site', price: 2500, description: 'Full branding, custom features, automation' }
   ];
 
+  // Replace the initialMessages array with a proper reference to the handleSendMessage function
+  const initialMessages = [
+    {
+      id: '1',
+      content: "Are you a real estate agent looking to upgrade your website?",
+      role: 'assistant' as const,
+      options: [
+        {
+          id: 'yes-leads',
+          label: '🏡 Yes, I want more leads',
+          action: () => handleSendMessage('Yes, I need a website that can help me generate more real estate leads'),
+        },
+        {
+          id: 'yes-listings',
+          label: '🧰 I want to show listings online',
+          action: () => handleSendMessage('I need a website where I can showcase my property listings'),
+        },
+        {
+          id: 'book-call',
+          label: '📅 I\'d like to book a call',
+          action: () => handleSendMessage('I\'d like to schedule a consultation about my real estate website needs'),
+        },
+        {
+          id: 'not-realtor',
+          label: 'I\'m not a real estate agent',
+          action: () => handleSendMessage('I\'m not a real estate agent, but I\'m interested in website services'),
+        },
+      ],
+    },
+  ];
+
   useEffect(() => {
     // Generate a unique user ID on first load
     if (!userId) {
