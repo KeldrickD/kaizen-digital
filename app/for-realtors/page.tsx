@@ -199,6 +199,15 @@ function PricingSection() {
   ];
 
   const [isLoading, setIsLoading] = React.useState<Record<string, boolean>>({})
+  const [paymentTypes, setPaymentTypes] = React.useState<Record<string, 'deposit' | 'full'>>({
+    'The Agent Brand Starter': 'deposit',
+    'The Growth Agent Package': 'deposit',
+    'The Top Producer Bundle': 'deposit'
+  })
+
+  const handlePaymentTypeChange = (tierTitle: string, type: 'deposit' | 'full') => {
+    setPaymentTypes({...paymentTypes, [tierTitle]: type})
+  }
 
   const handleCheckout = async (tier: any) => {
     // Set loading state for this specific tier
@@ -226,7 +235,7 @@ function PricingSection() {
       };
       
       addHiddenField('priceId', priceId);
-      addHiddenField('paymentType', 'deposit'); // Default to deposit for this page
+      addHiddenField('paymentType', paymentTypes[tier.title]); // Use selected payment type
       addHiddenField('packageType', tier.title);
       addHiddenField('mode', 'direct');
       
@@ -293,7 +302,32 @@ function PricingSection() {
                 ))}
               </ul>
 
-              <div className="mt-8">
+              <div className="mt-5 mb-4">
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="deposit"
+                      checked={paymentTypes[tier.title] === 'deposit'}
+                      onChange={() => handlePaymentTypeChange(tier.title, 'deposit')}
+                      className="h-4 w-4 text-red-500 focus:ring-red-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-300">Start with {tier.deposit} deposit</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="full"
+                      checked={paymentTypes[tier.title] === 'full'}
+                      onChange={() => handlePaymentTypeChange(tier.title, 'full')}
+                      className="h-4 w-4 text-red-500 focus:ring-red-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-300">Pay full amount ({tier.price})</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="mt-4">
                 <button
                   onClick={() => handleCheckout(tier)}
                   disabled={isLoading[tier.title]}
@@ -303,7 +337,7 @@ function PricingSection() {
                       : 'bg-gray-800 hover:bg-gray-700 text-white'
                   }`}
                 >
-                  <span>{isLoading[tier.title] ? 'Processing...' : tier.cta}</span>
+                  <span>{isLoading[tier.title] ? 'Processing...' : paymentTypes[tier.title] === 'deposit' ? tier.cta : `Pay ${tier.price}`}</span>
                   <FaChevronRight size={12} />
                 </button>
               </div>
